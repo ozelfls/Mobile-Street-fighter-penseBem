@@ -1,0 +1,133 @@
+import React from 'react';
+import {
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+const MODES = [
+  {
+    key: 'classic',
+    number: '01',
+    title: 'Clássico',
+    description: '50 perguntas aleatórias. Escolha entre 3 vidas ou vida única.',
+    detail: 'Dois jeitos de jogar',
+    color: '#F4C762',
+  },
+  {
+    key: 'basic',
+    number: '02',
+    title: 'Básico',
+    description: 'Os 5 programas originais do livro, com 30 perguntas cada.',
+    detail: 'Até 3 tentativas por pergunta',
+    color: '#55B88B',
+  },
+  {
+    key: 'pvp',
+    number: '03',
+    title: 'PvP',
+    description: 'Dois jogadores disputam perguntas com vida e tempo.',
+    detail: 'Duelo para 2 jogadores',
+    color: '#E77772',
+  },
+];
+
+export default function Home({ onSelect }) {
+  return (
+    <SafeAreaView style={styles.screen}>
+      <StatusBar barStyle="light-content" backgroundColor="#111827" />
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.kicker}>PENSE BEM</Text>
+          <Text style={styles.title}>Street Fighter II</Text>
+          <Text style={styles.subtitle}>Escolha como quer jogar.</Text>
+        </View>
+
+        <Text style={styles.sectionTitle}>Modos de jogo</Text>
+        {MODES.map((mode) => (
+          <TouchableOpacity
+            key={mode.key}
+            accessibilityRole="button"
+            accessibilityLabel={`${mode.title}. ${mode.description}`}
+            activeOpacity={0.8}
+            onPress={() => onSelect(mode.key)}
+            style={styles.card}
+          >
+            <View style={styles.cardTop}>
+              <View style={[styles.numberBadge, { backgroundColor: mode.color }]}>
+                <Text style={styles.numberText}>{mode.number}</Text>
+              </View>
+              <Text style={[styles.cardDetail, { color: mode.color }]}>{mode.detail}</Text>
+            </View>
+            <View style={styles.cardBody}>
+              <View style={styles.cardCopy}>
+                <Text style={styles.cardTitle}>{mode.title}</Text>
+                <Text style={styles.cardDescription}>{mode.description}</Text>
+              </View>
+              <Text style={[styles.arrow, { color: mode.color }]}>›</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+        <Text style={styles.footer}>Toque em um modo para começar.</Text>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#111827' },
+  content: {
+    flexGrow: 1,
+    width: '100%',
+    maxWidth: 650,
+    alignSelf: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 36,
+  },
+  header: { paddingTop: 28, paddingBottom: 32 },
+  kicker: {
+    color: '#F4C762',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 3,
+    marginBottom: 9,
+  },
+  title: { color: '#FFFFFF', fontSize: 32, fontWeight: '900', lineHeight: 38 },
+  subtitle: { color: '#B7C2D4', fontSize: 15, marginTop: 8 },
+  sectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 16,
+  },
+  card: {
+    backgroundColor: '#202B3D',
+    borderColor: '#34425A',
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 14,
+    minHeight: 145,
+  },
+  cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+  numberBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  numberText: { color: '#162033', fontSize: 14, fontWeight: '900' },
+  cardDetail: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  cardBody: { flexDirection: 'row', alignItems: 'center' },
+  cardCopy: { flex: 1 },
+  cardTitle: { color: '#FFFFFF', fontSize: 22, fontWeight: '900', marginBottom: 5 },
+  cardDescription: { color: '#C5D0E0', fontSize: 14, lineHeight: 20 },
+  arrow: { fontSize: 32, marginLeft: 10 },
+  footer: { color: '#91A0B6', fontSize: 12, textAlign: 'center', marginTop: 10 },
+});
