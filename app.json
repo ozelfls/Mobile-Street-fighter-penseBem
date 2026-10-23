@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Pense Bem: Street Fighter II",
+    "slug": "pensebem-street-fighter-ii",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#111827",
+    "android": {
+      "package": "com.pensebem.streetfighterii"
+    },
+    "ios": {
+      "bundleIdentifier": "com.pensebem.streetfighterii"
+    }
+  }
+}

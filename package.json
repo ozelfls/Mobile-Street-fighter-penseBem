@@ -1,0 +1,14 @@
+{
+  "name": "pensebem-street-fighter-ii",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start"
+  },
+  "dependencies": {
+    "expo": "~57.0.31",
+    "react": "19.2.3",
+    "react-native": "0.86.3"
+  }
+}
