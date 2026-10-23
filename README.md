@@ -7,7 +7,7 @@ Aplicativo React Native com Expo baseado nos cinco programas do livro *Pense Bem
 - **Básico:** cinco programas do livro, 30 perguntas cada, até três tentativas e 3/2/1/0 pontos.
 - **Clássico — Desafio:** 50 perguntas aleatórias sem repetição, um ponto por acerto e três vidas.
 - **Clássico — Sobrevivência:** 50 perguntas aleatórias sem repetição, um ponto por acerto; um erro encerra a partida e zera a pontuação.
-- **PvP:** dois jogadores no mesmo aparelho, em 20 turnos alternados. Cada um começa com 100 HP e tem 20 segundos por pergunta. Erro ou tempo esgotado tira de 10 a 30 HP, aumentando 5 HP a cada 5 segundos. O cronômetro começa quando o jogador toca em **Começar turno**.
+- **PvP:** dois jogadores no mesmo aparelho, em 20 turnos alternados. Ryu representa o jogador 1 e Ken, o jogador 2. Cada um começa com 100 HP e tem 20 segundos por pergunta. Acerto causa 15 de dano ao adversário; erro ou tempo esgotado tira de 10 a 30 HP de quem respondeu, aumentando 5 HP a cada 5 segundos. O cronômetro começa quando o jogador toca em **Começar turno**.
 
 ## Rodar localmente
 
@@ -25,6 +25,7 @@ Abra o QR code no Expo Go ou use as opções do Expo para Android, iOS ou navega
 - `App.js`: navegação entre os modos.
 - `Home.js`: tela inicial.
 - `Game.js`: perguntas e regras das partidas.
+- `CombatStage.js` e `assets/combat/`: cena animada do PvP e fontes dos GIFs.
 - `questions.json`: perguntas, alternativas e gabarito dos programas 1 a 5.
 - `app.json`: configuração do Expo.
 

@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import book from './questions.json';
+import CombatStage from './CombatStage';
 
 const COLORS = {
   red: { label: 'Vermelho', hex: '#C9474C' },
@@ -174,14 +175,15 @@ export default function Game({ mode, onExit }) {
     const expired = timedOut || elapsedMs >= TURN_SECONDS * 1000;
     const acceptedCorrect = correct && !expired;
     const elapsed = expired ? TURN_SECONDS : Math.floor(elapsedMs / 1000);
-    const damage = acceptedCorrect ? 0 : Math.min(30, 10 + 5 * Math.floor(elapsed / 5));
+    const damage = acceptedCorrect ? 15 : Math.min(30, 10 + 5 * Math.floor(elapsed / 5));
     const nextHp = [...hp];
-    nextHp[playerIndex] = Math.max(0, nextHp[playerIndex] - damage);
-    if (!acceptedCorrect) setHp(nextHp);
-    const endedByHp = nextHp[playerIndex] === 0;
+    const damagedPlayer = acceptedCorrect ? 1 - playerIndex : playerIndex;
+    nextHp[damagedPlayer] = Math.max(0, nextHp[damagedPlayer] - damage);
+    setHp(nextHp);
+    const endedByHp = nextHp[damagedPlayer] === 0;
     const endedByTurns = position + 1 === deck.length;
     setLastTurn(endedByHp || endedByTurns);
-    if (endedByHp) setEndReason(`Jogador ${playerIndex + 1} ficou sem vida.`);
+    if (endedByHp) setEndReason(`Jogador ${damagedPlayer + 1} ficou sem vida.`);
     else if (endedByTurns) setEndReason('Os 20 turnos terminaram.');
     setFeedback({ correct: acceptedCorrect, damage, timedOut: expired });
     setPhase('feedback');
@@ -299,6 +301,7 @@ export default function Game({ mode, onExit }) {
             <Text style={styles.tag}>TURNO {position + 1} DE {deck.length}</Text>
             <Text style={styles.heading}>Jogador {playerIndex + 1}, pronto?</Text>
             <Text style={styles.body}>Passe o celular para o jogador {playerIndex + 1}. O cronômetro de 20 segundos começa ao tocar no botão.</Text>
+            <CombatStage event={null} />
             <HealthBars hp={hp} />
             <Button label="Começar turno" onPress={startPvpTurn} />
           </View>
@@ -309,6 +312,7 @@ export default function Game({ mode, onExit }) {
             {isPvp ? (
               <>
                 <Text style={styles.body}>{endReason}</Text>
+                <CombatStage event={null} />
                 <HealthBars hp={hp} />
               </>
             ) : (
@@ -348,15 +352,24 @@ export default function Game({ mode, onExit }) {
               <Text style={styles.tag}>{isPvp ? `JOGADOR ${playerIndex + 1}` : isBasic ? `PROGRAMA ${program?.id} · ${program?.code}` : `VIDAS ${'♥'.repeat(Math.max(0, lives))}`}</Text>
               <Text style={styles.statValue}>{isPvp ? `${remaining}s` : `${score} pts`}</Text>
             </View>
-            {isPvp && (
-              <HealthBars hp={hp} />
-            )}
             <View style={styles.track}><View style={[styles.fill, { width: `${((position + 1) / deck.length) * 100}%` }]} /></View>
             <Text style={styles.progress}>{isPvp ? 'Turno' : 'Pergunta'} {position + 1} de {deck.length}</Text>
             <View style={styles.questionCard}>
               <Text style={styles.questionNumber}>QUESTÃO {String(current.number).padStart(2, '0')}</Text>
               <Text style={styles.question}>{current.prompt}</Text>
             </View>
+            {isPvp && (
+              <>
+                <CombatStage
+                  event={phase === 'feedback' && feedback ? {
+                    id: position,
+                    attacker: feedback.correct ? playerIndex : null,
+                    hurt: feedback.correct ? 1 - playerIndex : playerIndex,
+                  } : null}
+                />
+                <HealthBars hp={hp} />
+              </>
+            )}
             <Text style={styles.choiceTitle}>Escolha a resposta pela cor</Text>
             {current.options.map((option) => {
               const color = COLORS[option.color] || { label: option.color, hex: '#64748B' };
@@ -382,7 +395,7 @@ export default function Game({ mode, onExit }) {
               <View style={styles.feedbackBox}>
                 <Text style={[styles.feedbackTitle, !feedback.correct && styles.feedbackError]}>
                   {isPvp
-                    ? feedback.correct ? 'Acertou! Sem dano.' : feedback.timedOut ? `Tempo esgotado! −${feedback.damage} HP` : `Errou! −${feedback.damage} HP`
+                    ? feedback.correct ? 'Acertou! O adversário perdeu 15 HP.' : feedback.timedOut ? `Tempo esgotado! Você perdeu ${feedback.damage} HP.` : `Errou! Você perdeu ${feedback.damage} HP.`
                     : feedback.correct ? `Acertou! +${feedback.earned} ${feedback.earned === 1 ? 'ponto' : 'pontos'}` : isBasic ? 'Fim das tentativas · 0 pontos' : mode === 'survival' ? 'Errou! Pontuação zerada.' : 'Errou! Perdeu uma vida.'}
                 </Text>
                 {!feedback.correct && <Text style={styles.feedbackDetail}>Resposta: {COLORS[current.correctColor]?.label || current.correctColor}.</Text>}
@@ -390,7 +403,7 @@ export default function Game({ mode, onExit }) {
               </View>
             ) : (
               <Text style={styles.hint}>
-                {isBasic ? attempts === 0 ? 'Você tem 3 tentativas.' : `${3 - attempts} ${3 - attempts === 1 ? 'tentativa restante' : 'tentativas restantes'}.` : isPvp ? 'Erro e tempo esgotado tiram vida do jogador atual.' : 'Uma resposta por pergunta. Cada acerto vale 1 ponto.'}
+                {isBasic ? attempts === 0 ? 'Você tem 3 tentativas.' : `${3 - attempts} ${3 - attempts === 1 ? 'tentativa restante' : 'tentativas restantes'}.` : isPvp ? 'Acerto tira 15 HP do rival. Erro e tempo esgotado reduzem seu HP.' : 'Uma resposta por pergunta. Cada acerto vale 1 ponto.'}
               </Text>
             )}
           </View>
