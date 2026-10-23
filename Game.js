@@ -371,7 +371,6 @@ export default function Game({ mode, onExit }) {
                   style={[styles.option, rejected && styles.rejected, right && styles.right]}>
                   <View style={[styles.swatch, { backgroundColor: color.hex }]} />
                   <View style={styles.optionCopy}>
-                    <Text style={styles.optionColor}>{color.label}</Text>
                     <Text style={styles.optionText}>{option.text}</Text>
                   </View>
                   {rejected && <Text style={styles.wrongIcon}>×</Text>}
@@ -440,7 +439,6 @@ const styles = StyleSheet.create({
   right: { borderColor: '#55B88B' },
   swatch: { width: 33, height: 33, borderRadius: 9, marginRight: 12 },
   optionCopy: { flex: 1 },
-  optionColor: { color: '#334155', fontSize: 11, fontWeight: '800', textTransform: 'uppercase', marginBottom: 3 },
   optionText: { color: '#172235', fontSize: 15, fontWeight: '600', lineHeight: 20 },
   wrongIcon: { color: '#9B2731', fontSize: 24 },
   rightIcon: { color: '#278963', fontSize: 22 },
