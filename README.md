@@ -22,7 +22,7 @@ Abra o QR code no Expo Go ou use as opções do Expo para Android, iOS ou navega
 
 ## Prévia de teste
 
-[Abrir a versão atual para revisão no Expo Snack](https://snack.expo.dev/GOt9kiGfpFyu0F-tUzM8g?platform=web). Este é o link de teste para o grupo; a versão final de entrega será definida após a revisão.
+[Abrir a versão de teste do carro bônus no Expo Snack](https://snack.expo.dev/NVAk2uP-vGTqLHQ4wQj7T?platform=web). Esta prévia corresponde à branch `classic-car-bonus` e aguarda revisão antes de entrar na `main`.
 
 ## Arquivos principais
 
