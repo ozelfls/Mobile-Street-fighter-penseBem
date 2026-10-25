@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 const SPRITES = {
   ryu: {
@@ -32,14 +32,39 @@ export const COMBAT_CHARACTERS = [
 ];
 
 const CHARACTER_NAMES = Object.fromEntries(COMBAT_CHARACTERS.map(({ id, name }) => [id, name]));
+const ATTACK_SIZE = {
+  ryu: { width: 128, height: 258 },
+  ken: { width: 130, height: 214 },
+  chunli: { width: 220, height: 133 },
+  blanka: { width: 220, height: 140 },
+};
 
 export default function CombatStage({ characters = ['ryu', 'ken'], event }) {
   const [poses, setPoses] = useState(['idle', 'idle']);
+  const [arenaWidth, setArenaWidth] = useState(360);
+  const { height: windowHeight } = useWindowDimensions();
   const eventId = event?.id;
   const left = SPRITES[characters[0]] ? characters[0] : 'ryu';
   const right = SPRITES[characters[1]] ? characters[1] : 'ken';
-  const leftWideAttack = left === 'chunli' || left === 'blanka';
-  const rightWideAttack = right === 'chunli' || right === 'blanka';
+  const scale = Math.max(0.64, Math.min(1.08, arenaWidth / 360, windowHeight / 800));
+
+  function imageStyle(character, pose, side) {
+    if (pose !== 'attack') {
+      return { width: '100%', height: 145 * scale, position: 'absolute', bottom: 0 };
+    }
+    const size = ATTACK_SIZE[character];
+    const wideOffset = character === 'chunli' || character === 'blanka'
+      ? (side === 'left' ? 30 : -30) * scale
+      : 0;
+    return {
+      width: size.width * scale,
+      height: size.height * scale,
+      position: 'absolute',
+      bottom: 0,
+      left: '50%',
+      marginLeft: -size.width * scale / 2 + wideOffset,
+    };
+  }
 
   useEffect(() => {
     if (eventId == null) {
@@ -56,39 +81,39 @@ export default function CombatStage({ characters = ['ryu', 'ken'], event }) {
   }, [eventId]);
 
   return (
-    <View style={styles.arena} accessible accessibilityLabel={`Arena de combate: ${CHARACTER_NAMES[left]} à esquerda e ${CHARACTER_NAMES[right]} à direita`}>
+    <View
+      style={[styles.arena, { paddingTop: 10 * scale }]}
+      onLayout={(layout) => {
+        const nextWidth = layout.nativeEvent.layout.width;
+        if (Math.abs(nextWidth - arenaWidth) > 1) setArenaWidth(nextWidth);
+      }}
+      accessible accessibilityLabel={`Arena de combate: ${CHARACTER_NAMES[left]} à esquerda e ${CHARACTER_NAMES[right]} à direita`}
+    >
       <Text style={styles.arenaLabel}>ARENA</Text>
       <View style={styles.fighters}>
         <View style={styles.fighter}>
-          <View style={styles.spriteFrame}>
+          <View style={[styles.spriteFrame, { height: 258 * scale }]}>
             <Image
               key={`${left}-${poses[0]}-${eventId ?? 'idle'}`}
               source={SPRITES[left][poses[0]]}
               resizeMode="contain"
-              style={[
-                poses[0] === 'attack' ? styles[`${left}Attack`] || styles.defaultAttack : styles.sprite,
-                poses[0] === 'attack' && leftWideAttack && styles.wideAttackLeft,
-              ]}
+              style={imageStyle(left, poses[0], 'left')}
               accessibilityLabel={`${CHARACTER_NAMES[left]} ${poses[0] === 'attack' ? 'atacando' : poses[0] === 'hurt' ? 'apanhando' : 'em guarda'}`}
             />
           </View>
-          <Text style={styles.name}>{CHARACTER_NAMES[left].toUpperCase()} · J1</Text>
+          <Text style={[styles.name, { fontSize: 11 * scale }]}>{CHARACTER_NAMES[left].toUpperCase()} · J1</Text>
         </View>
         <View style={styles.fighter}>
-          <View style={styles.spriteFrame}>
+          <View style={[styles.spriteFrame, { height: 258 * scale }]}>
             <Image
               key={`${right}-${poses[1]}-${eventId ?? 'idle'}`}
               source={SPRITES[right][poses[1]]}
               resizeMode="contain"
-              style={[
-                poses[1] === 'attack' ? styles[`${right}Attack`] || styles.defaultAttack : styles.sprite,
-                poses[1] === 'attack' && rightWideAttack && styles.wideAttackRight,
-                styles.faceLeft,
-              ]}
+              style={[imageStyle(right, poses[1], 'right'), styles.faceLeft]}
               accessibilityLabel={`${CHARACTER_NAMES[right]} ${poses[1] === 'attack' ? 'atacando' : poses[1] === 'hurt' ? 'apanhando' : 'em guarda'}`}
             />
           </View>
-          <Text style={styles.name}>{CHARACTER_NAMES[right].toUpperCase()} · J2</Text>
+          <Text style={[styles.name, { fontSize: 11 * scale }]}>{CHARACTER_NAMES[right].toUpperCase()} · J2</Text>
         </View>
       </View>
       <View style={styles.floor} />
@@ -102,8 +127,7 @@ const styles = StyleSheet.create({
     borderColor: '#34425A',
     borderWidth: 1,
     borderRadius: 17,
-    overflow: 'visible',
-    minHeight: 300,
+    overflow: 'hidden',
     marginTop: 8,
     paddingTop: 10,
   },
@@ -121,15 +145,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   fighter: { width: '48%', alignItems: 'center' },
-  spriteFrame: { width: '100%', height: 258, overflow: 'visible' },
-  sprite: { width: '100%', height: 145, position: 'absolute', bottom: 0 },
-  ryuAttack: { width: 128, height: 258, position: 'absolute', bottom: 0, left: '50%', marginLeft: -64 },
-  kenAttack: { width: 130, height: 214, position: 'absolute', bottom: 0, left: '50%', marginLeft: -65 },
-  chunliAttack: { width: 220, height: 133, position: 'absolute', bottom: 0, left: '50%', marginLeft: -110 },
-  blankaAttack: { width: 220, height: 140, position: 'absolute', bottom: 0, left: '50%', marginLeft: -110 },
-  wideAttackLeft: { marginLeft: -80 },
-  wideAttackRight: { marginLeft: -140 },
-  defaultAttack: { width: 145, height: 230, position: 'absolute', bottom: 0, left: '50%', marginLeft: -72 },
+  spriteFrame: { width: '100%', overflow: 'visible' },
   faceLeft: { transform: [{ scaleX: -1 }] },
   name: { color: '#F4C762', fontSize: 11, fontWeight: '900', marginBottom: 6 },
   floor: { height: 8, backgroundColor: '#34425A' },

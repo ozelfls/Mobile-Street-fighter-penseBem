@@ -20,6 +20,10 @@ npm start
 
 Abra o QR code no Expo Go ou use as opções do Expo para Android, iOS ou navegador.
 
+## Prévia de teste
+
+[Abrir a versão atual para revisão no Expo Snack](https://snack.expo.dev/n_Bjj5EsZTRdsl6HDvUvS?platform=web). Este é o link de teste para o grupo; a versão final de entrega será definida após a revisão.
+
 ## Arquivos principais
 
 - `App.js`: navegação entre os modos.
