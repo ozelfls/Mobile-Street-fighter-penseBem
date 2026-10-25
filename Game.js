@@ -7,9 +7,10 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
 } from 'react-native';
 import book from './questions.json';
-import CombatStage from './CombatStage';
+import CombatStage, { COMBAT_CHARACTERS } from './CombatStage';
 
 const COLORS = {
   red: { label: 'Vermelho', hex: '#C9474C' },
@@ -81,6 +82,8 @@ export default function Game({ mode, onExit }) {
   const [remaining, setRemaining] = useState(TURN_SECONDS);
   const [lastTurn, setLastTurn] = useState(false);
   const [endReason, setEndReason] = useState('');
+  const [characters, setCharacters] = useState([null, null]);
+  const [selectingPlayer, setSelectingPlayer] = useState(0);
   const locked = useRef(false);
   const attemptsNow = useRef(0);
   const wrongNow = useRef([]);
@@ -100,6 +103,8 @@ export default function Game({ mode, onExit }) {
     setLastTurn(false);
     setEndReason('');
     setProgram(null);
+    setCharacters([null, null]);
+    setSelectingPlayer(0);
     if (mode === 'basic') {
       setDeck([]);
       setLives(0);
@@ -111,7 +116,7 @@ export default function Game({ mode, onExit }) {
     } else if (mode === 'pvp') {
       setDeck(shuffledQuestions(PVP_TURNS));
       setLives(0);
-      setPhase('ready');
+      setPhase('characterSelect');
     } else {
       setDeck([]);
       setPhase('select');
@@ -158,6 +163,17 @@ export default function Game({ mode, onExit }) {
     wrongNow.current = [];
     locked.current = false;
     setPhase('playing');
+  }
+
+  function chooseCharacter(characterId) {
+    if (phase !== 'characterSelect' || characters.includes(characterId)) return;
+    if (selectingPlayer === 0) {
+      setCharacters([characterId, null]);
+      setSelectingPlayer(1);
+    } else {
+      setCharacters([characters[0], characterId]);
+      setPhase('ready');
+    }
   }
 
   function startPvpTurn() {
@@ -296,12 +312,44 @@ export default function Game({ mode, onExit }) {
               </TouchableOpacity>
             ))}
           </View>
+        ) : phase === 'characterSelect' && isPvp ? (
+          <View>
+            <Text style={styles.heading}>Jogador {selectingPlayer + 1}, escolha seu lutador</Text>
+            <Text style={styles.muted}>
+              {selectingPlayer === 0
+                ? 'O Jogador 1 fica à esquerda da arena.'
+                : 'O Jogador 2 fica à direita. Escolha um personagem diferente do Jogador 1.'}
+            </Text>
+            <View style={styles.characterGrid}>
+              {COMBAT_CHARACTERS.map((character) => {
+                const unavailable = characters.includes(character.id);
+                return (
+                  <TouchableOpacity key={character.id} accessibilityRole="button"
+                    accessibilityLabel={`${character.name}${unavailable ? ', já escolhido pelo Jogador 1' : ''}`}
+                    accessibilityState={{ disabled: unavailable }}
+                    disabled={unavailable} activeOpacity={0.8}
+                    onPress={() => chooseCharacter(character.id)}
+                    style={[styles.characterCard, unavailable && styles.characterUnavailable]}>
+                    <Image source={character.portrait} resizeMode="contain" style={styles.characterPortrait} />
+                    <Text style={styles.characterName}>{character.name}</Text>
+                    {unavailable && <Text style={styles.characterTaken}>Escolhido por J1</Text>}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {selectingPlayer === 1 && (
+              <Button label="Alterar escolha do Jogador 1" secondary onPress={() => {
+                setCharacters([null, null]);
+                setSelectingPlayer(0);
+              }} />
+            )}
+          </View>
         ) : phase === 'ready' && isPvp ? (
           <View style={styles.panel}>
             <Text style={styles.tag}>TURNO {position + 1} DE {deck.length}</Text>
             <Text style={styles.heading}>Jogador {playerIndex + 1}, pronto?</Text>
             <Text style={styles.body}>Passe o celular para o jogador {playerIndex + 1}. O cronômetro de 20 segundos começa ao tocar no botão.</Text>
-            <CombatStage event={null} />
+            <CombatStage characters={characters} event={null} />
             <HealthBars hp={hp} />
             <Button label="Começar turno" onPress={startPvpTurn} />
           </View>
@@ -312,7 +360,7 @@ export default function Game({ mode, onExit }) {
             {isPvp ? (
               <>
                 <Text style={styles.body}>{endReason}</Text>
-                <CombatStage event={null} />
+                <CombatStage characters={characters} event={null} />
                 <HealthBars hp={hp} />
               </>
             ) : (
@@ -344,6 +392,17 @@ export default function Game({ mode, onExit }) {
                 }
               }}
             />
+            {isPvp && <Button label="Trocar personagens" secondary onPress={() => {
+              setCharacters([null, null]);
+              setSelectingPlayer(0);
+              setDeck(shuffledQuestions(PVP_TURNS));
+              setPosition(0);
+              setHp([100, 100]);
+              setFeedback(null);
+              setLastTurn(false);
+              setEndReason('');
+              setPhase('characterSelect');
+            }} />}
             <Button label="Voltar ao início" secondary onPress={onExit} />
           </View>
         ) : current ? (
@@ -361,6 +420,7 @@ export default function Game({ mode, onExit }) {
             {isPvp && (
               <>
                 <CombatStage
+                  characters={characters}
                   event={phase === 'feedback' && feedback ? {
                     id: position,
                     attacker: feedback.correct ? playerIndex : null,
@@ -431,6 +491,12 @@ const styles = StyleSheet.create({
   badgeText: { color: '#162033', fontSize: 21, fontWeight: '900' },
   programCopy: { flex: 1, paddingHorizontal: 13 },
   programName: { color: '#FFFFFF', fontSize: 17, fontWeight: '800' },
+  characterGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  characterCard: { width: '48%', backgroundColor: '#202B3D', borderColor: '#34425A', borderWidth: 1, borderRadius: 15, minHeight: 170, alignItems: 'center', justifyContent: 'center', padding: 12, marginBottom: 12 },
+  characterUnavailable: { opacity: 0.4 },
+  characterPortrait: { width: '100%', height: 112 },
+  characterName: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', marginTop: 8 },
+  characterTaken: { color: '#F4C762', fontSize: 11, fontWeight: '700', marginTop: 3 },
   arrow: { color: '#F4C762', fontSize: 28 },
   tag: { color: '#F4C762', fontSize: 12, fontWeight: '800', letterSpacing: 0.8 },
   statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
