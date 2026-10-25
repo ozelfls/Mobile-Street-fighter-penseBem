@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-const SPRITES = {
+export const SPRITES = {
   ryu: {
     idle: require('./assets/combat/ryu-idle.gif'),
     attack: require('./assets/combat/ryu-attack.gif'),

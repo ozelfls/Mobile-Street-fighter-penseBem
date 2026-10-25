@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import book from './questions.json';
 import CombatStage, { COMBAT_CHARACTERS } from './CombatStage';
+import BonusCarStage from './BonusCarStage';
 
 const COLORS = {
   red: { label: 'Vermelho', hex: '#C9474C' },
@@ -82,12 +83,14 @@ export default function Game({ mode, onExit }) {
   const [wrongColors, setWrongColors] = useState([]);
   const [feedback, setFeedback] = useState(null);
   const [score, setScore] = useState(0);
+  const [carHits, setCarHits] = useState(0);
   const [lives, setLives] = useState(0);
   const [hp, setHp] = useState([100, 100]);
   const [remaining, setRemaining] = useState(TURN_SECONDS);
   const [lastTurn, setLastTurn] = useState(false);
   const [endReason, setEndReason] = useState('');
   const [characters, setCharacters] = useState([null, null]);
+  const [selectedClassicCharacter, setSelectedClassicCharacter] = useState(null);
   const [selectingPlayer, setSelectingPlayer] = useState(0);
   const locked = useRef(false);
   const attemptsNow = useRef(0);
@@ -95,7 +98,7 @@ export default function Game({ mode, onExit }) {
   const startedAt = useRef(0);
 
   useEffect(() => {
-    if (mode === 'pvp' && phase === 'feedback') {
+    if ((mode === 'pvp' || mode === 'challenge' || mode === 'survival') && phase === 'feedback') {
       requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: false }));
     } else {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -111,12 +114,14 @@ export default function Game({ mode, onExit }) {
     setWrongColors([]);
     setFeedback(null);
     setScore(0);
+    setCarHits(0);
     setHp([100, 100]);
     setRemaining(TURN_SECONDS);
     setLastTurn(false);
     setEndReason('');
     setProgram(null);
     setCharacters([null, null]);
+    setSelectedClassicCharacter(null);
     setSelectingPlayer(0);
     if (mode === 'basic') {
       setDeck([]);
@@ -125,7 +130,7 @@ export default function Game({ mode, onExit }) {
     } else if (mode === 'challenge' || mode === 'survival') {
       setDeck(shuffledQuestions(CLASSIC_LENGTH));
       setLives(mode === 'challenge' ? 3 : 1);
-      setPhase('playing');
+      setPhase('characterSelect');
     } else if (mode === 'pvp') {
       setDeck(shuffledQuestions(PVP_TURNS));
       setLives(0);
@@ -179,7 +184,13 @@ export default function Game({ mode, onExit }) {
   }
 
   function chooseCharacter(characterId) {
-    if (phase !== 'characterSelect' || characters.includes(characterId)) return;
+    if (phase !== 'characterSelect') return;
+    if (isClassic) {
+      setSelectedClassicCharacter(characterId);
+      setPhase('playing');
+      return;
+    }
+    if (characters.includes(characterId)) return;
     if (selectingPlayer === 0) {
       setCharacters([characterId, null]);
       setSelectingPlayer(1);
@@ -244,7 +255,10 @@ export default function Game({ mode, onExit }) {
       if (locked.current) return;
       locked.current = true;
       const correct = color === current.correctColor;
-      if (correct) setScore((value) => value + 1);
+      if (correct) {
+        setScore((value) => value + 1);
+        setCarHits((value) => value + 1);
+      }
       else {
         setLives((value) => value - 1);
         if (mode === 'survival') setScore(0);
@@ -309,7 +323,7 @@ export default function Game({ mode, onExit }) {
       <StatusBar barStyle="light-content" backgroundColor="#111827" />
       <ScrollView ref={scrollRef}
         onContentSizeChange={() => {
-          if (isPvp && phase === 'feedback') scrollRef.current?.scrollToEnd({ animated: false });
+          if ((isPvp || isClassic) && phase === 'feedback') scrollRef.current?.scrollToEnd({ animated: false });
         }}
         contentContainerStyle={[styles.content, compact && styles.contentCompact, narrow && styles.contentNarrow]}>
         <View style={[styles.header, compact && styles.headerCompact]}>
@@ -343,6 +357,22 @@ export default function Game({ mode, onExit }) {
                 <Text style={styles.arrow}>›</Text>
               </TouchableOpacity>
             ))}
+          </View>
+        ) : phase === 'characterSelect' && isClassic ? (
+          <View>
+            <Text accessibilityRole="header" style={[styles.heading, compact && styles.headingCompact]}>Escolha seu lutador</Text>
+            <Text style={styles.muted}>Seu personagem vai atacar o carro bônus a cada resposta certa.</Text>
+            <View style={styles.characterGrid}>
+              {COMBAT_CHARACTERS.map((character) => (
+                <TouchableOpacity key={character.id} accessibilityRole="button"
+                  accessibilityLabel={`Jogar com ${character.name}`}
+                  activeOpacity={0.8} onPress={() => chooseCharacter(character.id)}
+                  style={[styles.characterCard, compact && styles.characterCardCompact]}>
+                  <Image source={character.portrait} resizeMode="contain" style={[styles.characterPortrait, compact && styles.characterPortraitCompact]} />
+                  <Text style={styles.characterName}>{character.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         ) : phase === 'characterSelect' && isPvp ? (
           <View>
@@ -416,6 +446,7 @@ export default function Game({ mode, onExit }) {
                   setDeck(shuffledQuestions(CLASSIC_LENGTH));
                   setPosition(0);
                   setScore(0);
+                  setCarHits(0);
                   setLives(mode === 'challenge' ? 3 : 1);
                   setFeedback(null);
                   locked.current = false;
@@ -424,6 +455,18 @@ export default function Game({ mode, onExit }) {
                 }
               }}
             />
+            {isClassic && <Button label="Trocar lutador" secondary onPress={() => {
+              setSelectedClassicCharacter(null);
+              setDeck(shuffledQuestions(CLASSIC_LENGTH));
+              setPosition(0);
+              setScore(0);
+              setCarHits(0);
+              setLives(mode === 'challenge' ? 3 : 1);
+              setFeedback(null);
+              locked.current = false;
+              setEndReason('');
+              setPhase('characterSelect');
+            }} />}
             {isPvp && <Button label="Trocar personagens" secondary onPress={() => {
               setCharacters([null, null]);
               setSelectingPlayer(0);
@@ -449,9 +492,9 @@ export default function Game({ mode, onExit }) {
               <Text style={styles.questionNumber}>QUESTÃO {String(current.number).padStart(2, '0')}</Text>
               <Text accessibilityRole="header" style={[styles.question, compact && styles.questionCompact]}>{current.prompt}</Text>
             </View>
-            {!isPvp && phase === 'feedback' && responseStatus}
-            {phase !== 'feedback' || !isPvp ? <Text style={styles.choiceTitle}>Escolha a resposta pela cor</Text> : null}
-            {(phase !== 'feedback' || !isPvp) && current.options.map((option) => {
+            {isBasic && phase === 'feedback' && responseStatus}
+            {phase !== 'feedback' || isBasic ? <Text style={styles.choiceTitle}>Escolha a resposta pela cor</Text> : null}
+            {(phase !== 'feedback' || isBasic) && current.options.map((option) => {
               const color = COLORS[option.color] || { label: option.color, hex: '#64748B' };
               const rejected = wrongColors.includes(option.color);
               const right = phase === 'feedback' && option.color === current.correctColor;
@@ -485,7 +528,12 @@ export default function Game({ mode, onExit }) {
                 <HealthBars hp={hp} />
               </>
             )}
-            {isPvp && phase === 'feedback' && responseStatus}
+            {isClassic && <BonusCarStage
+              character={selectedClassicCharacter}
+              event={phase === 'feedback' && feedback?.correct ? { id: position } : null}
+              score={carHits}
+            />}
+            {(isPvp || isClassic) && phase === 'feedback' && responseStatus}
           </View>
         ) : null}
       </ScrollView>

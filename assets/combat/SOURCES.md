@@ -16,3 +16,6 @@ GIFs de Street Fighter obtidos no acervo [The Fighters Generation](https://www.f
 | `blanka-idle.gif` | https://www.fightersgeneration.com/characters/sf-blanka.gif |
 | `blanka-attack.gif` | https://www.fightersgeneration.com/characters/blanka-electric.gif |
 | `blanka-hurt.gif` | https://www.fightersgeneration.com/characters/blanka-diz.gif |
+| `bonus-car-sprites.png` | [The Spriters Resource](https://www.spriters-resource.com/arcade/streetfighter2/asset/40792/) (extração: Magma MK-II); [arquivo espelhado](https://image.pngaaa.com/504/8193504.png) |
+
+No Clássico, o carro é exibido a partir dos estados desse sprite sheet; os ataques usam os GIFs dos quatro lutadores listados acima.
