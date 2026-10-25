@@ -478,7 +478,7 @@ export default function Game({ mode, onExit }) {
                   characters={characters}
                   event={phase === 'feedback' && feedback ? {
                     id: position,
-                    attacker: feedback.correct ? playerIndex : null,
+                    attacker: feedback.correct ? playerIndex : 1 - playerIndex,
                     hurt: feedback.correct ? 1 - playerIndex : playerIndex,
                   } : null}
                 />
