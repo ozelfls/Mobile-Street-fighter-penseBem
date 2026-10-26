@@ -48,9 +48,9 @@ function Button({ label, onPress, secondary = false }) {
   );
 }
 
-function HealthBars({ hp }) {
+function HealthBars({ hp, compact = false }) {
   return (
-    <View style={styles.hpRow}>
+    <View style={[styles.hpRow, compact && styles.hpRowCompact]}>
       {hp.map((value, index) => (
         <View key={index} style={styles.hpColumn}>
           <Text style={styles.hpText}>J{index + 1} · {value} HP</Text>
@@ -103,11 +103,7 @@ export default function Game({ mode, onExit }) {
   const survivalDeadline = useRef(0);
 
   useEffect(() => {
-    if ((mode === 'pvp' || mode === 'challenge' || mode === 'survival') && phase === 'feedback') {
-      requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: false }));
-    } else {
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
-    }
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [mode, phase, position, selectingPlayer]);
 
   useEffect(() => {
@@ -368,13 +364,88 @@ export default function Game({ mode, onExit }) {
     </Text>
   ));
 
+  const pinnedGameplay = current && (isPvp || isClassic) && (phase === 'playing' || phase === 'feedback');
+  const gameHeader = (
+    <View style={[styles.header, styles.pinnedHeader]}>
+      <View style={styles.headerRow}>
+        <Text style={styles.kicker}>PENSE BEM · STREET FIGHTER II</Text>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Sair para o início" onPress={onExit} style={styles.exitButton}>
+          <Text style={styles.exit}>Sair</Text>
+        </TouchableOpacity>
+      </View>
+      <Text accessibilityRole="header" style={[styles.title, styles.pinnedTitle]}>{modeTitle}</Text>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="light-content" backgroundColor="#111827" />
+      {pinnedGameplay ? (
+        <View style={[styles.pinnedLayout, narrow && styles.pinnedNarrow]}>
+          {gameHeader}
+          {mode === 'survival' ? (
+            <View style={[styles.survivalHud, styles.pinnedHud]}>
+              <View style={[styles.survivalTimerBox, styles.pinnedTimerBox, survivalRemaining <= 30 && styles.survivalTimerUrgent]} accessibilityLabel={`Tempo restante: ${Math.floor(survivalRemaining / 60)} minutos e ${survivalRemaining % 60} segundos`}>
+                <Text style={styles.survivalHudLabel}>TEMPO RESTANTE</Text>
+                <Text style={[styles.survivalTimerValue, survivalRemaining <= 30 && styles.survivalTimerValueUrgent]}>{Math.floor(survivalRemaining / 60)}:{String(survivalRemaining % 60).padStart(2, '0')}</Text>
+              </View>
+              <View style={[styles.survivalScoreBox, styles.pinnedTimerBox]}>
+                <Text style={styles.survivalHudLabel}>PONTOS</Text>
+                <Text style={styles.survivalScoreValue} numberOfLines={1} adjustsFontSizeToFit>{score}</Text>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.statsRow}>
+              <Text style={styles.tag}>{isPvp ? `JOGADOR ${playerIndex + 1}` : `VIDAS ${'♥'.repeat(Math.max(0, lives))}`}</Text>
+              <Text style={styles.statValue}>{isPvp ? `${remaining}s` : `${score} pts`}</Text>
+            </View>
+          )}
+          <View style={styles.track}><View style={[styles.fill, { width: `${mode === 'survival' ? (survivalRemaining / SURVIVAL_SECONDS) * 100 : ((position + 1) / deck.length) * 100}%` }]} /></View>
+          <Text style={[styles.progress, styles.pinnedProgress]}>{mode === 'survival' ? `Pergunta ${survivalQuestionsAnswered + (phase === 'feedback' ? 0 : 1)} · ${streak} acertos em sequência` : `${isPvp ? 'Turno' : 'Pergunta'} ${position + 1} de ${deck.length}`}</Text>
+          <ScrollView key={`${mode}-${position}`} style={styles.questionScroll} contentContainerStyle={styles.questionScrollContent}>
+            <View style={[styles.questionCard, compact && styles.questionCardCompact, styles.pinnedQuestionCard]}>
+              <Text style={styles.questionNumber}>QUESTÃO {String(current.number).padStart(2, '0')}</Text>
+              <Text accessibilityRole="header" style={[styles.question, compact && styles.questionCompact]}>{current.prompt}</Text>
+            </View>
+            {phase === 'playing' && (
+              <>
+                <Text style={styles.choiceTitle}>Escolha a resposta pela cor</Text>
+                {current.options.map((option) => {
+                  const color = COLORS[option.color] || { label: option.color, hex: '#64748B' };
+                  return (
+                    <TouchableOpacity key={option.color} accessibilityRole="button"
+                      accessibilityLabel={`${color.label}: ${option.text}`}
+                      onPress={() => answer(option.color)} activeOpacity={0.8}
+                      style={[styles.option, compact && styles.optionCompact]}>
+                      <View style={[styles.swatch, compact && styles.swatchCompact, { backgroundColor: color.hex }]} />
+                      <View style={styles.optionCopy}><Text style={styles.optionText}>{option.text}</Text></View>
+                    </TouchableOpacity>
+                  );
+                })}
+                {responseStatus}
+              </>
+            )}
+          </ScrollView>
+          <View style={styles.pinnedBottom}>
+            {isPvp ? (
+              <>
+                <CombatStage characters={characters} compactViewport={height < 720}
+                  event={phase === 'feedback' && feedback ? {
+                    id: position,
+                    attacker: feedback.correct ? playerIndex : 1 - playerIndex,
+                    hurt: feedback.correct ? 1 - playerIndex : playerIndex,
+                  } : null} />
+                <HealthBars hp={hp} compact />
+              </>
+            ) : (
+              <BonusCarStage character={selectedClassicCharacter} compactViewport={height < 720}
+                event={phase === 'feedback' && feedback?.correct ? { id: position } : null} score={carHits} />
+            )}
+            {phase === 'feedback' && responseStatus}
+          </View>
+        </View>
+      ) : (
       <ScrollView ref={scrollRef}
-        onContentSizeChange={() => {
-          if ((isPvp || isClassic) && phase === 'feedback') scrollRef.current?.scrollToEnd({ animated: false });
-        }}
         contentContainerStyle={[styles.content, compact && styles.contentCompact, narrow && styles.contentNarrow]}>
         <View style={[styles.header, compact && styles.headerCompact]}>
           <View style={styles.headerRow}>
@@ -540,32 +611,19 @@ export default function Game({ mode, onExit }) {
           </View>
         ) : current ? (
           <View>
-            {mode === 'survival' ? (
-              <View style={styles.survivalHud}>
-                <View style={[styles.survivalTimerBox, survivalRemaining <= 30 && styles.survivalTimerUrgent]} accessibilityLabel={`Tempo restante: ${Math.floor(survivalRemaining / 60)} minutos e ${survivalRemaining % 60} segundos`}>
-                  <Text style={styles.survivalHudLabel}>TEMPO RESTANTE</Text>
-                  <Text style={[styles.survivalTimerValue, survivalRemaining <= 30 && styles.survivalTimerValueUrgent]}>{Math.floor(survivalRemaining / 60)}:{String(survivalRemaining % 60).padStart(2, '0')}</Text>
-                </View>
-                <View style={styles.survivalScoreBox}>
-                  <Text style={styles.survivalHudLabel}>PONTOS</Text>
-                  <Text style={styles.survivalScoreValue} numberOfLines={1} adjustsFontSizeToFit>{score}</Text>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.statsRow}>
-                <Text style={styles.tag}>{isPvp ? `JOGADOR ${playerIndex + 1}` : isBasic ? `PROGRAMA ${program?.id} · ${program?.code}` : `VIDAS ${'♥'.repeat(Math.max(0, lives))}`}</Text>
-                <Text style={styles.statValue}>{isPvp ? `${remaining}s` : `${score} pts`}</Text>
-              </View>
-            )}
-            <View style={styles.track}><View style={[styles.fill, { width: `${mode === 'survival' ? (survivalRemaining / SURVIVAL_SECONDS) * 100 : ((position + 1) / deck.length) * 100}%` }]} /></View>
-            <Text style={styles.progress}>{mode === 'survival' ? `Pergunta ${survivalQuestionsAnswered + (phase === 'feedback' ? 0 : 1)} · ${streak} acertos em sequência` : `${isPvp ? 'Turno' : 'Pergunta'} ${position + 1} de ${deck.length}`}</Text>
+            <View style={styles.statsRow}>
+              <Text style={styles.tag}>{`PROGRAMA ${program?.id} · ${program?.code}`}</Text>
+              <Text style={styles.statValue}>{score} pts</Text>
+            </View>
+            <View style={styles.track}><View style={[styles.fill, { width: `${((position + 1) / deck.length) * 100}%` }]} /></View>
+            <Text style={styles.progress}>{`Pergunta ${position + 1} de ${deck.length}`}</Text>
             <View style={[styles.questionCard, compact && styles.questionCardCompact]}>
               <Text style={styles.questionNumber}>QUESTÃO {String(current.number).padStart(2, '0')}</Text>
               <Text accessibilityRole="header" style={[styles.question, compact && styles.questionCompact]}>{current.prompt}</Text>
             </View>
-            {isBasic && phase === 'feedback' && responseStatus}
-            {phase !== 'feedback' || isBasic ? <Text style={styles.choiceTitle}>Escolha a resposta pela cor</Text> : null}
-            {(phase !== 'feedback' || isBasic) && current.options.map((option) => {
+            {phase === 'feedback' && responseStatus}
+            <Text style={styles.choiceTitle}>Escolha a resposta pela cor</Text>
+            {current.options.map((option) => {
               const color = COLORS[option.color] || { label: option.color, hex: '#64748B' };
               const rejected = wrongColors.includes(option.color);
               const right = phase === 'feedback' && option.color === current.correctColor;
@@ -577,43 +635,34 @@ export default function Game({ mode, onExit }) {
                   activeOpacity={0.8} onPress={() => answer(option.color)}
                   style={[styles.option, compact && styles.optionCompact, rejected && styles.rejected, right && styles.right]}>
                   <View style={[styles.swatch, compact && styles.swatchCompact, { backgroundColor: color.hex }]} />
-                  <View style={styles.optionCopy}>
-                    <Text style={styles.optionText}>{option.text}</Text>
-                  </View>
+                  <View style={styles.optionCopy}><Text style={styles.optionText}>{option.text}</Text></View>
                   {rejected && <Text style={styles.wrongIcon}>×</Text>}
                   {right && <Text style={styles.rightIcon}>✓</Text>}
                 </TouchableOpacity>
               );
             })}
             {phase !== 'feedback' && responseStatus}
-            {isPvp && (
-              <>
-                <CombatStage
-                  characters={characters}
-                  event={phase === 'feedback' && feedback ? {
-                    id: position,
-                    attacker: feedback.correct ? playerIndex : 1 - playerIndex,
-                    hurt: feedback.correct ? 1 - playerIndex : playerIndex,
-                  } : null}
-                />
-                <HealthBars hp={hp} />
-              </>
-            )}
-            {isClassic && <BonusCarStage
-              character={selectedClassicCharacter}
-              event={phase === 'feedback' && feedback?.correct ? { id: position } : null}
-              score={carHits}
-            />}
-            {(isPvp || isClassic) && phase === 'feedback' && responseStatus}
           </View>
         ) : null}
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#111827' },
+  pinnedLayout: { flex: 1, width: '100%', maxWidth: 680, alignSelf: 'center', paddingHorizontal: 16, paddingBottom: 6 },
+  pinnedNarrow: { paddingHorizontal: 12 },
+  pinnedHeader: { paddingTop: 4, paddingBottom: 6 },
+  pinnedTitle: { fontSize: 19, marginTop: 0 },
+  pinnedHud: { marginBottom: 6 },
+  pinnedTimerBox: { minHeight: 76, paddingVertical: 5 },
+  pinnedProgress: { marginTop: 5, marginBottom: 2 },
+  questionScroll: { flex: 1, minHeight: 0 },
+  questionScrollContent: { paddingBottom: 8 },
+  pinnedQuestionCard: { marginTop: 6, marginBottom: 9, padding: 12 },
+  pinnedBottom: { flexShrink: 0 },
   content: { flexGrow: 1, width: '100%', maxWidth: 680, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 36 },
   contentCompact: { paddingHorizontal: 16, paddingBottom: 22 },
   contentNarrow: { paddingHorizontal: 12 },
@@ -659,6 +708,7 @@ const styles = StyleSheet.create({
   survivalTimerValueUrgent: { color: '#FF9999' },
   survivalScoreValue: { color: '#FFFFFF', fontSize: 26, lineHeight: 34, fontWeight: '900' },
   hpRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 15, padding: 12, borderRadius: 11, backgroundColor: '#2C3A50' },
+  hpRowCompact: { marginVertical: 6, padding: 8 },
   hpColumn: { width: '48%' },
   hpText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', marginBottom: 7 },
   hpTrack: { height: 9, borderRadius: 9, backgroundColor: '#111827', overflow: 'hidden' },

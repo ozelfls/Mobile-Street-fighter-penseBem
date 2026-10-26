@@ -25,13 +25,15 @@ const ATTACK_SIZE = {
 };
 const IMPACT_DELAY = { ryu: 160, ken: 700, chunli: 120, blanka: 130 };
 
-export default function BonusCarStage({ character = 'ryu', event, score = 0 }) {
+export default function BonusCarStage({ character = 'ryu', event, score = 0, compactViewport = false }) {
   const [attacking, setAttacking] = useState(false);
   const [impactVisible, setImpactVisible] = useState(false);
   const [displayHits, setDisplayHits] = useState(score);
   const shake = useRef(new Animated.Value(0)).current;
   const { height, width } = useWindowDimensions();
-  const scale = Math.min(1.05, (width - 40) / 340, height / 780);
+  const scale = compactViewport
+    ? Math.min((width - 24) / 340, Math.max(0.52, Math.min(0.72, height / 1000)))
+    : Math.min(1.05, (width - 40) / 340, height / 780);
   const fighter = SPRITES[character] ? character : 'ryu';
   const fighterName = COMBAT_CHARACTERS.find(({ id }) => id === fighter)?.name || 'Ryu';
   const eventId = event?.id;
@@ -80,7 +82,7 @@ export default function BonusCarStage({ character = 'ryu', event, score = 0 }) {
 
   return (
     <View
-      style={[styles.arena, { width: 340 * scale, height: 210 * scale }]}
+      style={[styles.arena, { width: 340 * scale, height: 210 * scale, marginTop: compactViewport ? 0 : 12 }]}
       accessible
       accessibilityLabel={`${fighterName} ${attacking ? 'atacando' : 'ao lado'} do carro bônus. ${score} acertos.`}
     >

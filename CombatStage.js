@@ -39,14 +39,16 @@ const ATTACK_SIZE = {
   blanka: { width: 220, height: 140 },
 };
 
-export default function CombatStage({ characters = ['ryu', 'ken'], event }) {
+export default function CombatStage({ characters = ['ryu', 'ken'], event, compactViewport = false }) {
   const [poses, setPoses] = useState(['idle', 'idle']);
   const [arenaWidth, setArenaWidth] = useState(360);
   const { height: windowHeight } = useWindowDimensions();
   const eventId = event?.id;
   const left = SPRITES[characters[0]] ? characters[0] : 'ryu';
   const right = SPRITES[characters[1]] ? characters[1] : 'ken';
-  const scale = Math.max(0.64, Math.min(1.08, arenaWidth / 360, windowHeight / 800));
+  const scale = compactViewport
+    ? Math.min(arenaWidth / 360, Math.max(0.45, Math.min(0.6, windowHeight / 1300)))
+    : Math.max(0.64, Math.min(1.08, arenaWidth / 360, windowHeight / 800));
 
   function imageStyle(character, pose, side) {
     if (pose !== 'attack') {
@@ -82,14 +84,14 @@ export default function CombatStage({ characters = ['ryu', 'ken'], event }) {
 
   return (
     <View
-      style={[styles.arena, { paddingTop: 10 * scale }]}
+      style={[styles.arena, { paddingTop: (compactViewport ? 4 : 10) * scale, marginTop: compactViewport ? 0 : 8 }]}
       onLayout={(layout) => {
         const nextWidth = layout.nativeEvent.layout.width;
         if (Math.abs(nextWidth - arenaWidth) > 1) setArenaWidth(nextWidth);
       }}
       accessible accessibilityLabel={`Arena de combate: ${CHARACTER_NAMES[left]} à esquerda e ${CHARACTER_NAMES[right]} à direita`}
     >
-      <Text style={styles.arenaLabel}>ARENA</Text>
+      {!compactViewport && <Text style={styles.arenaLabel}>ARENA</Text>}
       <View style={styles.fighters}>
         <View style={styles.fighter}>
           <View style={[styles.spriteFrame, { height: 258 * scale }]}>
