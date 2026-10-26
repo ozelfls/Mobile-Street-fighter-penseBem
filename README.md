@@ -22,7 +22,7 @@ Abra o QR code no Expo Go ou use as opções do Expo para Android, iOS ou navega
 
 ## Homologação para a aula
 
-[Abrir a versão de homologação no Expo Snack](https://snack.expo.dev/iFuYgQZhvJRPu1O04LWOM?platform=web). Esta versão corresponde ao código da `main` no commit `9ec9b0b`, com o layout mobile revisado. É necessário acesso à internet para carregar o jogo e os sprites.
+[Pense Bem - Homologacao para testes](https://snack.expo.dev/XLlTXQFo3p8KyC8QUqcFC?platform=web). Esta versão corresponde ao layout mobile integrado na `main`. É necessário acesso à internet para carregar o jogo e os sprites.
 
 ## Arquivos principais
 
