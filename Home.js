@@ -15,8 +15,8 @@ const MODES = [
     key: 'classic',
     number: '01',
     title: 'Clássico',
-    description: '50 perguntas aleatórias. Escolha entre 3 vidas ou vida única.',
-    detail: 'Dois jeitos de jogar',
+    description: 'Desafio: 50 perguntas e 3 vidas. Sobrevivência: 3 minutos, pontos em sequência e vida única.',
+    detail: 'Desafio ou Sobrevivência',
     color: '#F4C762',
   },
   {

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { COMBAT_CHARACTERS, SPRITES } from './CombatStage';
 
 const CAR_SHEET = require('./assets/combat/bonus-car-sprites.png');
@@ -18,10 +18,10 @@ const CAR_FRAMES = [
   { x: 380, y: 283 },
 ];
 const ATTACK_SIZE = {
-  ryu: { width: 145, height: 118, left: 19 },
-  ken: { width: 155, height: 136, left: 18 },
-  chunli: { width: 175, height: 142, left: 10 },
-  blanka: { width: 175, height: 124, left: 10 },
+  ryu: { width: 180, height: 146, left: 10 },
+  ken: { width: 215, height: 189, left: 13 },
+  chunli: { width: 225, height: 161, left: 0 },
+  blanka: { width: 227, height: 160, left: -5 },
 };
 const IMPACT_DELAY = { ryu: 160, ken: 700, chunli: 120, blanka: 130 };
 
@@ -86,7 +86,6 @@ export default function BonusCarStage({ character = 'ryu', event, score = 0 }) {
     >
       <Image source={HARBOR_STAGE} resizeMode="stretch"
         style={[styles.stageBackground, { width: 636 * scale, height: 479 * scale, left: -296 * scale, top: -229 * scale }]} />
-      <Text style={styles.label}>CARRO BÔNUS</Text>
       <Animated.View
         style={[
           styles.carWindow,
@@ -127,7 +126,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   stageBackground: { position: 'absolute' },
-  label: { alignSelf: 'flex-start', color: '#FFFFFF', backgroundColor: '#152B43CC', borderRadius: 4, paddingHorizontal: 7, paddingVertical: 3, overflow: 'hidden', fontSize: 10, fontWeight: '900', letterSpacing: 1.5, marginTop: 7, marginLeft: 8 },
   carWindow: { position: 'absolute', overflow: 'hidden' },
   fighter: { position: 'absolute' },
   impact: { position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: '#F4C762BB' },

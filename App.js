@@ -14,8 +14,8 @@ const variants = [
   {
     key: 'survival',
     title: 'Sobrevivência',
-    subtitle: 'Vida única',
-    description: '50 perguntas sorteadas. Errou uma vez, a partida acaba e a pontuação zera.',
+    subtitle: '3 minutos · vida única',
+    description: 'Acerte em sequência para multiplicar os pontos. Um erro encerra a partida.',
     accent: '#E77772',
   },
 ];
@@ -31,7 +31,7 @@ function ClassicChoice({ onSelect, onBack }) {
       <ScrollView contentContainerStyle={[styles.content, compact && styles.contentCompact, narrow && styles.contentNarrow]}>
         <Text style={[styles.kicker, compact && styles.kickerCompact]}>PENSE BEM · STREET FIGHTER II</Text>
         <Text style={[styles.title, compact && styles.titleCompact]}>Clássico</Text>
-        <Text style={[styles.subtitle, compact && styles.subtitleCompact]}>Escolha como enfrentar as 50 perguntas.</Text>
+        <Text style={[styles.subtitle, compact && styles.subtitleCompact]}>Escolha entre 50 perguntas com três vidas ou 3 minutos para marcar pontos.</Text>
         {variants.map((variant) => (
           <TouchableOpacity key={variant.key} accessibilityRole="button"
             accessibilityLabel={`${variant.title}, ${variant.subtitle}. ${variant.description}`}

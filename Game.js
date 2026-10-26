@@ -21,6 +21,7 @@ const COLORS = {
   green: { label: 'Verde', hex: '#3E9876' },
 };
 const CLASSIC_LENGTH = 50;
+const SURVIVAL_SECONDS = 180;
 const PVP_TURNS = 20;
 const TURN_SECONDS = 20;
 
@@ -83,6 +84,8 @@ export default function Game({ mode, onExit }) {
   const [wrongColors, setWrongColors] = useState([]);
   const [feedback, setFeedback] = useState(null);
   const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [survivalRemaining, setSurvivalRemaining] = useState(SURVIVAL_SECONDS);
   const [carHits, setCarHits] = useState(0);
   const [lives, setLives] = useState(0);
   const [hp, setHp] = useState([100, 100]);
@@ -96,6 +99,7 @@ export default function Game({ mode, onExit }) {
   const attemptsNow = useRef(0);
   const wrongNow = useRef([]);
   const startedAt = useRef(0);
+  const survivalDeadline = useRef(0);
 
   useEffect(() => {
     if ((mode === 'pvp' || mode === 'challenge' || mode === 'survival') && phase === 'feedback') {
@@ -114,6 +118,9 @@ export default function Game({ mode, onExit }) {
     setWrongColors([]);
     setFeedback(null);
     setScore(0);
+    setStreak(0);
+    setSurvivalRemaining(SURVIVAL_SECONDS);
+    survivalDeadline.current = 0;
     setCarHits(0);
     setHp([100, 100]);
     setRemaining(TURN_SECONDS);
@@ -128,7 +135,7 @@ export default function Game({ mode, onExit }) {
       setLives(0);
       setPhase('select');
     } else if (mode === 'challenge' || mode === 'survival') {
-      setDeck(shuffledQuestions(CLASSIC_LENGTH));
+      setDeck(shuffledQuestions(mode === 'survival' ? undefined : CLASSIC_LENGTH));
       setLives(mode === 'challenge' ? 3 : 1);
       setPhase('characterSelect');
     } else if (mode === 'pvp') {
@@ -155,6 +162,20 @@ export default function Game({ mode, onExit }) {
       resolvePvp(false, true);
     }
   }, [mode, phase, remaining]);
+
+  useEffect(() => {
+    if (mode !== 'survival' || (phase !== 'playing' && phase !== 'feedback') || lives === 0) return undefined;
+    const timer = setInterval(() => {
+      const seconds = Math.max(0, Math.ceil((survivalDeadline.current - Date.now()) / 1000));
+      setSurvivalRemaining(seconds);
+      if (seconds === 0 && phase === 'playing') {
+        locked.current = true;
+        setEndReason('Os 3 minutos terminaram.');
+        setPhase('ended');
+      }
+    }, 200);
+    return () => clearInterval(timer);
+  }, [mode, phase, lives]);
 
   const current = deck[position];
   const playerIndex = position % 2;
@@ -187,6 +208,10 @@ export default function Game({ mode, onExit }) {
     if (phase !== 'characterSelect') return;
     if (isClassic) {
       setSelectedClassicCharacter(characterId);
+      if (mode === 'survival') {
+        survivalDeadline.current = Date.now() + SURVIVAL_SECONDS * 1000;
+        setSurvivalRemaining(SURVIVAL_SECONDS);
+      }
       setPhase('playing');
       return;
     }
@@ -253,17 +278,26 @@ export default function Game({ mode, onExit }) {
       }
     } else if (isClassic) {
       if (locked.current) return;
+      if (mode === 'survival' && Date.now() >= survivalDeadline.current) {
+        locked.current = true;
+        setSurvivalRemaining(0);
+        setEndReason('Os 3 minutos terminaram.');
+        setPhase('ended');
+        return;
+      }
       locked.current = true;
       const correct = color === current.correctColor;
       if (correct) {
-        setScore((value) => value + 1);
+        const earned = mode === 'survival' ? Math.round(100 * 1.1 ** streak) : 1;
+        setScore((value) => value + earned);
+        if (mode === 'survival') setStreak((value) => value + 1);
         setCarHits((value) => value + 1);
+        setFeedback({ correct: true, earned });
       }
       else {
         setLives((value) => value - 1);
-        if (mode === 'survival') setScore(0);
+        setFeedback({ correct: false, earned: 0 });
       }
-      setFeedback({ correct, earned: correct ? 1 : 0 });
       setPhase('feedback');
     } else if (isPvp) {
       resolvePvp(color === current.correctColor);
@@ -271,11 +305,18 @@ export default function Game({ mode, onExit }) {
   }
 
   function advance() {
+    if (mode === 'survival' && lives > 0 && Date.now() >= survivalDeadline.current) {
+      locked.current = true;
+      setSurvivalRemaining(0);
+      setEndReason('Os 3 minutos terminaram.');
+      setPhase('ended');
+      return;
+    }
     if (isBasic && position + 1 === deck.length) {
       setPhase('ended');
       return;
     }
-    if (isClassic && (position + 1 === deck.length || lives === 0)) {
+    if (isClassic && ((mode === 'challenge' && position + 1 === deck.length) || lives === 0)) {
       setEndReason(lives === 0 ? 'As vidas acabaram.' : 'As 50 perguntas terminaram.');
       setPhase('ended');
       return;
@@ -284,7 +325,12 @@ export default function Game({ mode, onExit }) {
       setPhase('ended');
       return;
     }
-    setPosition((value) => value + 1);
+    if (mode === 'survival' && position + 1 === deck.length) {
+      setDeck(shuffledQuestions());
+      setPosition(0);
+    } else {
+      setPosition((value) => value + 1);
+    }
     setFeedback(null);
     locked.current = false;
     if (isBasic) {
@@ -307,14 +353,14 @@ export default function Game({ mode, onExit }) {
       <Text style={[styles.feedbackTitle, !feedback.correct && styles.feedbackError]}>
         {isPvp
           ? feedback.correct ? 'Acertou! O adversário perdeu 15 HP.' : feedback.timedOut ? `Tempo esgotado! Você perdeu ${feedback.damage} HP.` : `Errou! Você perdeu ${feedback.damage} HP.`
-          : feedback.correct ? `Acertou! +${feedback.earned} ${feedback.earned === 1 ? 'ponto' : 'pontos'}` : isBasic ? 'Fim das tentativas · 0 pontos' : mode === 'survival' ? 'Errou! Pontuação zerada.' : 'Errou! Perdeu uma vida.'}
+          : feedback.correct ? `Acertou! +${feedback.earned} ${feedback.earned === 1 ? 'ponto' : 'pontos'}` : isBasic ? 'Fim das tentativas · 0 pontos' : mode === 'survival' ? 'Errou! Fim da partida.' : 'Errou! Perdeu uma vida.'}
       </Text>
       {!feedback.correct && <Text style={styles.feedbackDetail}>Resposta: {COLORS[current.correctColor]?.label || current.correctColor}.</Text>}
-      <Button label={lastTurn || (isBasic && position + 1 === deck.length) || (isClassic && (position + 1 === deck.length || lives === 0)) ? 'Ver resultado' : isPvp ? 'Próximo jogador' : 'Próxima pergunta'} onPress={advance} />
+      <Button label={lastTurn || (isBasic && position + 1 === deck.length) || (isClassic && (lives === 0 || (mode === 'challenge' && position + 1 === deck.length) || (mode === 'survival' && survivalRemaining === 0))) ? 'Ver resultado' : isPvp ? 'Próximo jogador' : 'Próxima pergunta'} onPress={advance} />
     </View>
   ) : (
     <Text style={styles.hint}>
-      {isBasic ? attempts === 0 ? 'Você tem 3 tentativas.' : `${3 - attempts} ${3 - attempts === 1 ? 'tentativa restante' : 'tentativas restantes'}.` : isPvp ? 'Acerto tira 15 HP do rival. Erro e tempo esgotado reduzem seu HP.' : 'Uma resposta por pergunta. Cada acerto vale 1 ponto.'}
+      {isBasic ? attempts === 0 ? 'Você tem 3 tentativas.' : `${3 - attempts} ${3 - attempts === 1 ? 'tentativa restante' : 'tentativas restantes'}.` : isPvp ? 'Acerto tira 15 HP do rival. Erro e tempo esgotado reduzem seu HP.' : mode === 'survival' ? `Próximo acerto: ${Math.round(100 * 1.1 ** streak)} pontos. Um erro encerra a partida.` : 'Uma resposta por pergunta. Cada acerto vale 1 ponto.'}
     </Text>
   ));
 
@@ -361,7 +407,7 @@ export default function Game({ mode, onExit }) {
         ) : phase === 'characterSelect' && isClassic ? (
           <View>
             <Text accessibilityRole="header" style={[styles.heading, compact && styles.headingCompact]}>Escolha seu lutador</Text>
-            <Text style={styles.muted}>Seu personagem vai atacar o carro bônus a cada resposta certa.</Text>
+            <Text style={styles.muted}>{mode === 'survival' ? 'Você tem 3 minutos. Cada acerto aumenta o valor do próximo em 1,1x. Um erro encerra a partida.' : 'Seu personagem vai atacar o carro a cada resposta certa.'}</Text>
             <View style={styles.characterGrid}>
               {COMBAT_CHARACTERS.map((character) => (
                 <TouchableOpacity key={character.id} accessibilityRole="button"
@@ -427,7 +473,7 @@ export default function Game({ mode, onExit }) {
               </>
             ) : (
               <>
-                <Text style={styles.bigScore}>{score}<Text style={styles.outOf}> / {isBasic ? deck.length * 3 : CLASSIC_LENGTH}</Text></Text>
+                <Text style={styles.bigScore}>{score}<Text style={styles.outOf}>{mode === 'survival' ? ' pts' : ` / ${isBasic ? deck.length * 3 : CLASSIC_LENGTH}`}</Text></Text>
                 <Text style={styles.body}>{isBasic ? `Programa ${program?.id} · Código ${program?.code}` : endReason}</Text>
               </>
             )}
@@ -443,9 +489,12 @@ export default function Game({ mode, onExit }) {
                   setEndReason('');
                   setPhase('ready');
                 } else {
-                  setDeck(shuffledQuestions(CLASSIC_LENGTH));
+                  setDeck(shuffledQuestions(mode === 'survival' ? undefined : CLASSIC_LENGTH));
                   setPosition(0);
                   setScore(0);
+                  setStreak(0);
+                  setSurvivalRemaining(SURVIVAL_SECONDS);
+                  if (mode === 'survival') survivalDeadline.current = Date.now() + SURVIVAL_SECONDS * 1000;
                   setCarHits(0);
                   setLives(mode === 'challenge' ? 3 : 1);
                   setFeedback(null);
@@ -457,9 +506,12 @@ export default function Game({ mode, onExit }) {
             />
             {isClassic && <Button label="Trocar lutador" secondary onPress={() => {
               setSelectedClassicCharacter(null);
-              setDeck(shuffledQuestions(CLASSIC_LENGTH));
+              setDeck(shuffledQuestions(mode === 'survival' ? undefined : CLASSIC_LENGTH));
               setPosition(0);
               setScore(0);
+              setStreak(0);
+              setSurvivalRemaining(SURVIVAL_SECONDS);
+              survivalDeadline.current = 0;
               setCarHits(0);
               setLives(mode === 'challenge' ? 3 : 1);
               setFeedback(null);
@@ -483,11 +535,11 @@ export default function Game({ mode, onExit }) {
         ) : current ? (
           <View>
             <View style={styles.statsRow}>
-              <Text style={styles.tag}>{isPvp ? `JOGADOR ${playerIndex + 1}` : isBasic ? `PROGRAMA ${program?.id} · ${program?.code}` : `VIDAS ${'♥'.repeat(Math.max(0, lives))}`}</Text>
+              <Text style={styles.tag}>{isPvp ? `JOGADOR ${playerIndex + 1}` : isBasic ? `PROGRAMA ${program?.id} · ${program?.code}` : mode === 'survival' ? `VIDA ${'♥'.repeat(Math.max(0, lives))} · ${Math.floor(survivalRemaining / 60)}:${String(survivalRemaining % 60).padStart(2, '0')}` : `VIDAS ${'♥'.repeat(Math.max(0, lives))}`}</Text>
               <Text style={styles.statValue}>{isPvp ? `${remaining}s` : `${score} pts`}</Text>
             </View>
-            <View style={styles.track}><View style={[styles.fill, { width: `${((position + 1) / deck.length) * 100}%` }]} /></View>
-            <Text style={styles.progress}>{isPvp ? 'Turno' : 'Pergunta'} {position + 1} de {deck.length}</Text>
+            <View style={styles.track}><View style={[styles.fill, { width: `${mode === 'survival' ? (survivalRemaining / SURVIVAL_SECONDS) * 100 : ((position + 1) / deck.length) * 100}%` }]} /></View>
+            <Text style={styles.progress}>{mode === 'survival' ? `Pergunta ${carHits + (phase === 'feedback' && feedback?.correct ? 0 : 1)} · ${streak} acertos em sequência` : `${isPvp ? 'Turno' : 'Pergunta'} ${position + 1} de ${deck.length}`}</Text>
             <View style={[styles.questionCard, compact && styles.questionCardCompact]}>
               <Text style={styles.questionNumber}>QUESTÃO {String(current.number).padStart(2, '0')}</Text>
               <Text accessibilityRole="header" style={[styles.question, compact && styles.questionCompact]}>{current.prompt}</Text>
