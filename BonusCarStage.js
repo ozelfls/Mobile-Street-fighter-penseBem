@@ -26,13 +26,12 @@ const ATTACK_SIZE = {
 const IMPACT_DELAY = { ryu: 160, ken: 700, chunli: 120, blanka: 130 };
 
 export default function BonusCarStage({ character = 'ryu', event, score = 0 }) {
-  const [width, setWidth] = useState(340);
   const [attacking, setAttacking] = useState(false);
   const [impactVisible, setImpactVisible] = useState(false);
   const [displayHits, setDisplayHits] = useState(score);
   const shake = useRef(new Animated.Value(0)).current;
-  const { height } = useWindowDimensions();
-  const scale = Math.max(0.62, Math.min(1.05, width / 340, height / 780));
+  const { height, width } = useWindowDimensions();
+  const scale = Math.min(1.05, (width - 40) / 340, height / 780);
   const fighter = SPRITES[character] ? character : 'ryu';
   const fighterName = COMBAT_CHARACTERS.find(({ id }) => id === fighter)?.name || 'Ryu';
   const eventId = event?.id;
@@ -81,15 +80,12 @@ export default function BonusCarStage({ character = 'ryu', event, score = 0 }) {
 
   return (
     <View
-      style={[styles.arena, { height: 210 * scale }]}
-      onLayout={({ nativeEvent }) => {
-        const nextWidth = nativeEvent.layout.width;
-        if (Math.abs(nextWidth - width) > 1) setWidth(nextWidth);
-      }}
+      style={[styles.arena, { width: 340 * scale, height: 210 * scale }]}
       accessible
       accessibilityLabel={`${fighterName} ${attacking ? 'atacando' : 'ao lado'} do carro bônus. ${score} acertos.`}
     >
-      <Image source={HARBOR_STAGE} resizeMode="cover" style={styles.stageBackground} />
+      <Image source={HARBOR_STAGE} resizeMode="stretch"
+        style={[styles.stageBackground, { width: 636 * scale, height: 479 * scale, left: -296 * scale, top: -229 * scale }]} />
       <Text style={styles.label}>CARRO BÔNUS</Text>
       <Animated.View
         style={[
@@ -115,7 +111,7 @@ export default function BonusCarStage({ character = 'ryu', event, score = 0 }) {
         resizeMode="contain"
         style={[styles.fighter, fighterStyle, { bottom: 21 * scale }]}
       />
-      {impactVisible && <View style={[styles.impact, { left: width - 190 * scale, bottom: 82 * scale }]} />}
+      {impactVisible && <View style={[styles.impact, { left: 150 * scale, bottom: 82 * scale }]} />}
     </View>
   );
 }
@@ -123,8 +119,6 @@ export default function BonusCarStage({ character = 'ryu', event, score = 0 }) {
 const styles = StyleSheet.create({
   arena: {
     alignSelf: 'center',
-    width: '100%',
-    maxWidth: 340,
     backgroundColor: '#78B9EC',
     borderColor: '#486782',
     borderWidth: 1,
@@ -132,7 +126,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginTop: 12,
   },
-  stageBackground: { position: 'absolute', width: '100%', height: '100%' },
+  stageBackground: { position: 'absolute' },
   label: { alignSelf: 'flex-start', color: '#FFFFFF', backgroundColor: '#152B43CC', borderRadius: 4, paddingHorizontal: 7, paddingVertical: 3, overflow: 'hidden', fontSize: 10, fontWeight: '900', letterSpacing: 1.5, marginTop: 7, marginLeft: 8 },
   carWindow: { position: 'absolute', overflow: 'hidden' },
   fighter: { position: 'absolute' },
