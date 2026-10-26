@@ -20,9 +20,9 @@ npm start
 
 Abra o QR code no Expo Go ou use as opções do Expo para Android, iOS ou navegador.
 
-## Prévia de teste
+## Homologação para a aula
 
-[Abrir a versão atual no Expo Snack](https://snack.expo.dev/AJNRNrOnldWw01tIBLCSM?platform=web). Esta prévia corresponde à `main`, com a Sobrevivência por pontos e o cronômetro ampliado.
+[Abrir a versão de homologação no Expo Snack](https://snack.expo.dev/iFuYgQZhvJRPu1O04LWOM?platform=web). Esta versão corresponde ao código da `main` no commit `9ec9b0b`, com o layout mobile revisado. É necessário acesso à internet para carregar o jogo e os sprites.
 
 ## Arquivos principais
 
@@ -33,4 +33,3 @@ Abra o QR code no Expo Go ou use as opções do Expo para Android, iOS ou navega
 - `questions.json`: perguntas, alternativas e gabarito dos programas 1 a 5.
 - `app.json`: configuração do Expo.
 
-O link público para a entrega da avaliação será definido depois da revisão do grupo.
