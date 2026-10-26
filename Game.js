@@ -85,6 +85,7 @@ export default function Game({ mode, onExit }) {
   const [feedback, setFeedback] = useState(null);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
+  const [survivalQuestionsAnswered, setSurvivalQuestionsAnswered] = useState(0);
   const [survivalRemaining, setSurvivalRemaining] = useState(SURVIVAL_SECONDS);
   const [carHits, setCarHits] = useState(0);
   const [lives, setLives] = useState(0);
@@ -119,6 +120,7 @@ export default function Game({ mode, onExit }) {
     setFeedback(null);
     setScore(0);
     setStreak(0);
+    setSurvivalQuestionsAnswered(0);
     setSurvivalRemaining(SURVIVAL_SECONDS);
     survivalDeadline.current = 0;
     setCarHits(0);
@@ -136,7 +138,7 @@ export default function Game({ mode, onExit }) {
       setPhase('select');
     } else if (mode === 'challenge' || mode === 'survival') {
       setDeck(shuffledQuestions(mode === 'survival' ? undefined : CLASSIC_LENGTH));
-      setLives(mode === 'challenge' ? 3 : 1);
+      setLives(mode === 'challenge' ? 3 : 0);
       setPhase('characterSelect');
     } else if (mode === 'pvp') {
       setDeck(shuffledQuestions(PVP_TURNS));
@@ -164,18 +166,18 @@ export default function Game({ mode, onExit }) {
   }, [mode, phase, remaining]);
 
   useEffect(() => {
-    if (mode !== 'survival' || (phase !== 'playing' && phase !== 'feedback') || lives === 0) return undefined;
+    if (mode !== 'survival' || (phase !== 'playing' && phase !== 'feedback')) return undefined;
     const timer = setInterval(() => {
       const seconds = Math.max(0, Math.ceil((survivalDeadline.current - Date.now()) / 1000));
       setSurvivalRemaining(seconds);
-      if (seconds === 0 && phase === 'playing') {
+      if (seconds === 0) {
         locked.current = true;
         setEndReason('Os 3 minutos terminaram.');
         setPhase('ended');
       }
     }, 200);
     return () => clearInterval(timer);
-  }, [mode, phase, lives]);
+  }, [mode, phase]);
 
   const current = deck[position];
   const playerIndex = position % 2;
@@ -287,6 +289,7 @@ export default function Game({ mode, onExit }) {
       }
       locked.current = true;
       const correct = color === current.correctColor;
+      if (mode === 'survival') setSurvivalQuestionsAnswered((value) => value + 1);
       if (correct) {
         const earned = mode === 'survival' ? Math.round(100 * 1.1 ** streak) : 1;
         setScore((value) => value + earned);
@@ -295,7 +298,8 @@ export default function Game({ mode, onExit }) {
         setFeedback({ correct: true, earned });
       }
       else {
-        setLives((value) => value - 1);
+        if (mode === 'survival') setStreak(0);
+        else setLives((value) => value - 1);
         setFeedback({ correct: false, earned: 0 });
       }
       setPhase('feedback');
@@ -305,7 +309,7 @@ export default function Game({ mode, onExit }) {
   }
 
   function advance() {
-    if (mode === 'survival' && lives > 0 && Date.now() >= survivalDeadline.current) {
+    if (mode === 'survival' && Date.now() >= survivalDeadline.current) {
       locked.current = true;
       setSurvivalRemaining(0);
       setEndReason('Os 3 minutos terminaram.');
@@ -316,7 +320,7 @@ export default function Game({ mode, onExit }) {
       setPhase('ended');
       return;
     }
-    if (isClassic && ((mode === 'challenge' && position + 1 === deck.length) || lives === 0)) {
+    if (mode === 'challenge' && (position + 1 === deck.length || lives === 0)) {
       setEndReason(lives === 0 ? 'As vidas acabaram.' : 'As 50 perguntas terminaram.');
       setPhase('ended');
       return;
@@ -353,14 +357,14 @@ export default function Game({ mode, onExit }) {
       <Text style={[styles.feedbackTitle, !feedback.correct && styles.feedbackError]}>
         {isPvp
           ? feedback.correct ? 'Acertou! O adversário perdeu 15 HP.' : feedback.timedOut ? `Tempo esgotado! Você perdeu ${feedback.damage} HP.` : `Errou! Você perdeu ${feedback.damage} HP.`
-          : feedback.correct ? `Acertou! +${feedback.earned} ${feedback.earned === 1 ? 'ponto' : 'pontos'}` : isBasic ? 'Fim das tentativas · 0 pontos' : mode === 'survival' ? 'Errou! Fim da partida.' : 'Errou! Perdeu uma vida.'}
+          : feedback.correct ? `Acertou! +${feedback.earned} ${feedback.earned === 1 ? 'ponto' : 'pontos'}` : isBasic ? 'Fim das tentativas · 0 pontos' : mode === 'survival' ? 'Errou! Sequência zerada. Continue jogando.' : 'Errou! Perdeu uma vida.'}
       </Text>
       {!feedback.correct && <Text style={styles.feedbackDetail}>Resposta: {COLORS[current.correctColor]?.label || current.correctColor}.</Text>}
-      <Button label={lastTurn || (isBasic && position + 1 === deck.length) || (isClassic && (lives === 0 || (mode === 'challenge' && position + 1 === deck.length) || (mode === 'survival' && survivalRemaining === 0))) ? 'Ver resultado' : isPvp ? 'Próximo jogador' : 'Próxima pergunta'} onPress={advance} />
+      <Button label={lastTurn || (isBasic && position + 1 === deck.length) || (mode === 'challenge' && (lives === 0 || position + 1 === deck.length)) || (mode === 'survival' && survivalRemaining === 0) ? 'Ver resultado' : isPvp ? 'Próximo jogador' : 'Próxima pergunta'} onPress={advance} />
     </View>
   ) : (
     <Text style={styles.hint}>
-      {isBasic ? attempts === 0 ? 'Você tem 3 tentativas.' : `${3 - attempts} ${3 - attempts === 1 ? 'tentativa restante' : 'tentativas restantes'}.` : isPvp ? 'Acerto tira 15 HP do rival. Erro e tempo esgotado reduzem seu HP.' : mode === 'survival' ? `Próximo acerto: ${Math.round(100 * 1.1 ** streak)} pontos. Um erro encerra a partida.` : 'Uma resposta por pergunta. Cada acerto vale 1 ponto.'}
+      {isBasic ? attempts === 0 ? 'Você tem 3 tentativas.' : `${3 - attempts} ${3 - attempts === 1 ? 'tentativa restante' : 'tentativas restantes'}.` : isPvp ? 'Acerto tira 15 HP do rival. Erro e tempo esgotado reduzem seu HP.' : mode === 'survival' ? `Próximo acerto: ${Math.round(100 * 1.1 ** streak)} pontos. Erros zeram a sequência.` : 'Uma resposta por pergunta. Cada acerto vale 1 ponto.'}
     </Text>
   ));
 
@@ -407,7 +411,7 @@ export default function Game({ mode, onExit }) {
         ) : phase === 'characterSelect' && isClassic ? (
           <View>
             <Text accessibilityRole="header" style={[styles.heading, compact && styles.headingCompact]}>Escolha seu lutador</Text>
-            <Text style={styles.muted}>{mode === 'survival' ? 'Você tem 3 minutos. Cada acerto aumenta o valor do próximo em 1,1x. Um erro encerra a partida.' : 'Seu personagem vai atacar o carro a cada resposta certa.'}</Text>
+            <Text style={styles.muted}>{mode === 'survival' ? 'Você tem 3 minutos. Cada acerto aumenta o valor do próximo em 1,1x. Erros zeram a sequência, mas você mantém os pontos.' : 'Seu personagem vai atacar o carro a cada resposta certa.'}</Text>
             <View style={styles.characterGrid}>
               {COMBAT_CHARACTERS.map((character) => (
                 <TouchableOpacity key={character.id} accessibilityRole="button"
@@ -493,10 +497,11 @@ export default function Game({ mode, onExit }) {
                   setPosition(0);
                   setScore(0);
                   setStreak(0);
+                  setSurvivalQuestionsAnswered(0);
                   setSurvivalRemaining(SURVIVAL_SECONDS);
                   if (mode === 'survival') survivalDeadline.current = Date.now() + SURVIVAL_SECONDS * 1000;
                   setCarHits(0);
-                  setLives(mode === 'challenge' ? 3 : 1);
+                  setLives(mode === 'challenge' ? 3 : 0);
                   setFeedback(null);
                   locked.current = false;
                   setEndReason('');
@@ -510,10 +515,11 @@ export default function Game({ mode, onExit }) {
               setPosition(0);
               setScore(0);
               setStreak(0);
+              setSurvivalQuestionsAnswered(0);
               setSurvivalRemaining(SURVIVAL_SECONDS);
               survivalDeadline.current = 0;
               setCarHits(0);
-              setLives(mode === 'challenge' ? 3 : 1);
+              setLives(mode === 'challenge' ? 3 : 0);
               setFeedback(null);
               locked.current = false;
               setEndReason('');
@@ -534,12 +540,25 @@ export default function Game({ mode, onExit }) {
           </View>
         ) : current ? (
           <View>
-            <View style={styles.statsRow}>
-              <Text style={styles.tag}>{isPvp ? `JOGADOR ${playerIndex + 1}` : isBasic ? `PROGRAMA ${program?.id} · ${program?.code}` : mode === 'survival' ? `VIDA ${'♥'.repeat(Math.max(0, lives))} · ${Math.floor(survivalRemaining / 60)}:${String(survivalRemaining % 60).padStart(2, '0')}` : `VIDAS ${'♥'.repeat(Math.max(0, lives))}`}</Text>
-              <Text style={styles.statValue}>{isPvp ? `${remaining}s` : `${score} pts`}</Text>
-            </View>
+            {mode === 'survival' ? (
+              <View style={styles.survivalHud}>
+                <View style={[styles.survivalTimerBox, survivalRemaining <= 30 && styles.survivalTimerUrgent]} accessibilityLabel={`Tempo restante: ${Math.floor(survivalRemaining / 60)} minutos e ${survivalRemaining % 60} segundos`}>
+                  <Text style={styles.survivalHudLabel}>TEMPO RESTANTE</Text>
+                  <Text style={[styles.survivalTimerValue, survivalRemaining <= 30 && styles.survivalTimerValueUrgent]}>{Math.floor(survivalRemaining / 60)}:{String(survivalRemaining % 60).padStart(2, '0')}</Text>
+                </View>
+                <View style={styles.survivalScoreBox}>
+                  <Text style={styles.survivalHudLabel}>PONTOS</Text>
+                  <Text style={styles.survivalScoreValue} numberOfLines={1} adjustsFontSizeToFit>{score}</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.statsRow}>
+                <Text style={styles.tag}>{isPvp ? `JOGADOR ${playerIndex + 1}` : isBasic ? `PROGRAMA ${program?.id} · ${program?.code}` : `VIDAS ${'♥'.repeat(Math.max(0, lives))}`}</Text>
+                <Text style={styles.statValue}>{isPvp ? `${remaining}s` : `${score} pts`}</Text>
+              </View>
+            )}
             <View style={styles.track}><View style={[styles.fill, { width: `${mode === 'survival' ? (survivalRemaining / SURVIVAL_SECONDS) * 100 : ((position + 1) / deck.length) * 100}%` }]} /></View>
-            <Text style={styles.progress}>{mode === 'survival' ? `Pergunta ${carHits + (phase === 'feedback' && feedback?.correct ? 0 : 1)} · ${streak} acertos em sequência` : `${isPvp ? 'Turno' : 'Pergunta'} ${position + 1} de ${deck.length}`}</Text>
+            <Text style={styles.progress}>{mode === 'survival' ? `Pergunta ${survivalQuestionsAnswered + (phase === 'feedback' ? 0 : 1)} · ${streak} acertos em sequência` : `${isPvp ? 'Turno' : 'Pergunta'} ${position + 1} de ${deck.length}`}</Text>
             <View style={[styles.questionCard, compact && styles.questionCardCompact]}>
               <Text style={styles.questionNumber}>QUESTÃO {String(current.number).padStart(2, '0')}</Text>
               <Text accessibilityRole="header" style={[styles.question, compact && styles.questionCompact]}>{current.prompt}</Text>
@@ -631,6 +650,14 @@ const styles = StyleSheet.create({
   tag: { color: '#F4C762', fontSize: 12, fontWeight: '800', letterSpacing: 0.8 },
   statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   statValue: { color: '#FFFFFF', fontSize: 17, fontWeight: '800' },
+  survivalHud: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  survivalTimerBox: { flex: 1.25, minWidth: 0, minHeight: 90, paddingHorizontal: 14, paddingVertical: 10, justifyContent: 'center', borderRadius: 14, borderWidth: 2, borderColor: '#F4C762', backgroundColor: '#302C2E' },
+  survivalTimerUrgent: { borderColor: '#F07878', backgroundColor: '#3B262B' },
+  survivalScoreBox: { flex: 1, minWidth: 0, minHeight: 90, paddingHorizontal: 14, paddingVertical: 10, justifyContent: 'center', borderRadius: 14, borderWidth: 1, borderColor: '#46546C', backgroundColor: '#232D3D' },
+  survivalHudLabel: { color: '#B7C2D4', fontSize: 10, fontWeight: '800', letterSpacing: 0.7 },
+  survivalTimerValue: { color: '#F4C762', fontSize: 34, lineHeight: 39, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  survivalTimerValueUrgent: { color: '#FF9999' },
+  survivalScoreValue: { color: '#FFFFFF', fontSize: 26, lineHeight: 34, fontWeight: '900' },
   hpRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 15, padding: 12, borderRadius: 11, backgroundColor: '#2C3A50' },
   hpColumn: { width: '48%' },
   hpText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', marginBottom: 7 },

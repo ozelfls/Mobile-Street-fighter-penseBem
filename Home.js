@@ -15,7 +15,7 @@ const MODES = [
     key: 'classic',
     number: '01',
     title: 'Clássico',
-    description: 'Desafio: 50 perguntas e 3 vidas. Sobrevivência: 3 minutos, pontos em sequência e vida única.',
+    description: 'Desafio: 50 perguntas e 3 vidas. Sobrevivência: 3 minutos para somar pontos; errar reinicia a sequência.',
     detail: 'Desafio ou Sobrevivência',
     color: '#F4C762',
   },
