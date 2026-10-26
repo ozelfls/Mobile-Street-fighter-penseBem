@@ -22,7 +22,7 @@ Abra o QR code no Expo Go ou use as opções do Expo para Android, iOS ou navega
 
 ## Prévia de teste
 
-[Abrir a versão atual no Expo Snack](https://snack.expo.dev/OylMELMZBUjQ2FfChq3nS?platform=web). Esta prévia corresponde à `main`, com a nova Sobrevivência e a cena do carro.
+[Abrir a versão atual no Expo Snack](https://snack.expo.dev/AJNRNrOnldWw01tIBLCSM?platform=web). Esta prévia corresponde à `main`, com a Sobrevivência por pontos e o cronômetro ampliado.
 
 ## Arquivos principais
 
