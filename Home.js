@@ -12,24 +12,16 @@ import {
 
 const MODES = [
   {
-    key: 'classic',
-    number: '01',
-    title: 'Clássico',
-    description: 'Desafio: 50 perguntas e 3 vidas. Sobrevivência: 3 minutos para somar pontos; errar reinicia a sequência.',
-    detail: 'Desafio ou Sobrevivência',
-    color: '#F4C762',
-  },
-  {
     key: 'basic',
-    number: '02',
+    number: '01',
     title: 'Básico',
-    description: 'Os 5 programas originais do livro, com 30 perguntas cada.',
-    detail: 'Até 3 tentativas por pergunta',
+    description: 'Jogue com o livro físico: escolha um programa e um lutador, responda 30 questões e destrua o carro a cada acerto.',
+    detail: '3 tentativas · até 100 pontos',
     color: '#55B88B',
   },
   {
     key: 'pvp',
-    number: '03',
+    number: '02',
     title: 'PvP',
     description: 'Dois jogadores disputam perguntas com vida e tempo.',
     detail: 'Duelo para 2 jogadores',
@@ -49,7 +41,7 @@ export default function Home({ onSelect }) {
         <View style={[styles.header, compact && styles.headerCompact]}>
           <Text style={styles.kicker}>PENSE BEM</Text>
           <Text style={[styles.title, narrow && styles.titleNarrow]}>Street Fighter II</Text>
-          <Text style={styles.subtitle}>Escolha como quer jogar. Tenha o livro por perto: algumas perguntas usam as figuras dele.</Text>
+          <Text style={styles.subtitle}>Escolha como quer jogar. No Básico, acompanhe as questões no livro físico.</Text>
         </View>
 
         <Text style={[styles.sectionTitle, compact && styles.sectionTitleCompact]}>Modos de jogo</Text>

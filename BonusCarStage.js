@@ -26,6 +26,7 @@ const CAR_FRAMES = [
 ];
 const CAR_HIT_THRESHOLDS = {
   45: [0, 1, 3, 6, 10, 16, 24, 34, 45],
+  30: [0, 1, 2, 4, 7, 11, 16, 22, 30],
   15: [0, 1, 2, 3, 5, 7, 10, 12, 15],
 };
 const ATTACK_SIZE = {

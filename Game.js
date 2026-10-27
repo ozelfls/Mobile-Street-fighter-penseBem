@@ -13,6 +13,7 @@ import {
 import book from './questions.json';
 import CombatStage, { COMBAT_CHARACTERS } from './CombatStage';
 import BonusCarStage from './BonusCarStage';
+import { useAnswerSounds } from './SoundFeedback';
 
 const COLORS = {
   red: { label: 'Vermelho', hex: '#C9474C' },
@@ -20,8 +21,6 @@ const COLORS = {
   blue: { label: 'Azul', hex: '#4285BB' },
   green: { label: 'Verde', hex: '#3E9876' },
 };
-const CLASSIC_LENGTH = 50;
-const SURVIVAL_SECONDS = 180;
 const PVP_TURNS = 20;
 const TURN_SECONDS = 20;
 
@@ -84,23 +83,20 @@ export default function Game({ mode, onExit }) {
   const [wrongColors, setWrongColors] = useState([]);
   const [feedback, setFeedback] = useState(null);
   const [score, setScore] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [survivalQuestionsAnswered, setSurvivalQuestionsAnswered] = useState(0);
-  const [survivalRemaining, setSurvivalRemaining] = useState(SURVIVAL_SECONDS);
+  const [perfectRun, setPerfectRun] = useState(true);
   const [carHits, setCarHits] = useState(0);
-  const [lives, setLives] = useState(0);
   const [hp, setHp] = useState([100, 100]);
   const [remaining, setRemaining] = useState(TURN_SECONDS);
   const [lastTurn, setLastTurn] = useState(false);
   const [endReason, setEndReason] = useState('');
   const [characters, setCharacters] = useState([null, null]);
-  const [selectedClassicCharacter, setSelectedClassicCharacter] = useState(null);
+  const [selectedBasicCharacter, setSelectedBasicCharacter] = useState(null);
   const [selectingPlayer, setSelectingPlayer] = useState(0);
   const locked = useRef(false);
   const attemptsNow = useRef(0);
   const wrongNow = useRef([]);
   const startedAt = useRef(0);
-  const survivalDeadline = useRef(0);
+  const { playCorrect, playWrong } = useAnswerSounds();
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -115,10 +111,7 @@ export default function Game({ mode, onExit }) {
     setWrongColors([]);
     setFeedback(null);
     setScore(0);
-    setStreak(0);
-    setSurvivalQuestionsAnswered(0);
-    setSurvivalRemaining(SURVIVAL_SECONDS);
-    survivalDeadline.current = 0;
+    setPerfectRun(true);
     setCarHits(0);
     setHp([100, 100]);
     setRemaining(TURN_SECONDS);
@@ -126,19 +119,13 @@ export default function Game({ mode, onExit }) {
     setEndReason('');
     setProgram(null);
     setCharacters([null, null]);
-    setSelectedClassicCharacter(null);
+    setSelectedBasicCharacter(null);
     setSelectingPlayer(0);
     if (mode === 'basic') {
       setDeck([]);
-      setLives(0);
       setPhase('select');
-    } else if (mode === 'challenge' || mode === 'survival') {
-      setDeck(shuffledQuestions(mode === 'survival' ? undefined : CLASSIC_LENGTH));
-      setLives(mode === 'challenge' ? 3 : 0);
-      setPhase('characterSelect');
     } else if (mode === 'pvp') {
       setDeck(shuffledQuestions(PVP_TURNS));
-      setLives(0);
       setPhase('characterSelect');
     } else {
       setDeck([]);
@@ -161,55 +148,49 @@ export default function Game({ mode, onExit }) {
     }
   }, [mode, phase, remaining]);
 
-  useEffect(() => {
-    if (mode !== 'survival' || (phase !== 'playing' && phase !== 'feedback')) return undefined;
-    const timer = setInterval(() => {
-      const seconds = Math.max(0, Math.ceil((survivalDeadline.current - Date.now()) / 1000));
-      setSurvivalRemaining(seconds);
-      if (seconds === 0) {
-        locked.current = true;
-        setEndReason('Os 3 minutos terminaram.');
-        setPhase('ended');
-      }
-    }, 200);
-    return () => clearInterval(timer);
-  }, [mode, phase]);
-
   const current = deck[position];
   const playerIndex = position % 2;
   const isBasic = mode === 'basic';
-  const isClassic = mode === 'challenge' || mode === 'survival';
   const isPvp = mode === 'pvp';
-  const modeTitle = isBasic
-    ? 'Básico'
-    : mode === 'challenge'
-      ? 'Clássico · Desafio'
-      : mode === 'survival'
-        ? 'Clássico · Sobrevivência'
-        : 'PvP';
+  const modeTitle = isBasic ? 'Básico' : 'PvP';
+  const finalScore = score + (isBasic && perfectRun && phase === 'ended' ? 10 : 0);
 
   function chooseProgram(selected) {
     setProgram(selected);
     setDeck(selected.questions || []);
     setPosition(0);
     setScore(0);
+    setPerfectRun(true);
+    setCarHits(0);
+    setSelectedBasicCharacter(null);
     setAttempts(0);
     setWrongColors([]);
     setFeedback(null);
     attemptsNow.current = 0;
     wrongNow.current = [];
     locked.current = false;
-    setPhase('playing');
+    setPhase('characterSelect');
+  }
+
+  function replayBasic(nextPhase = 'playing') {
+    setPosition(0);
+    setScore(0);
+    setPerfectRun(true);
+    setCarHits(0);
+    setAttempts(0);
+    setWrongColors([]);
+    setFeedback(null);
+    attemptsNow.current = 0;
+    wrongNow.current = [];
+    locked.current = false;
+    if (nextPhase === 'characterSelect') setSelectedBasicCharacter(null);
+    setPhase(nextPhase);
   }
 
   function chooseCharacter(characterId) {
     if (phase !== 'characterSelect') return;
-    if (isClassic) {
-      setSelectedClassicCharacter(characterId);
-      if (mode === 'survival') {
-        survivalDeadline.current = Date.now() + SURVIVAL_SECONDS * 1000;
-        setSurvivalRemaining(SURVIVAL_SECONDS);
-      }
+    if (isBasic) {
+      setSelectedBasicCharacter(characterId);
       setPhase('playing');
       return;
     }
@@ -249,6 +230,8 @@ export default function Game({ mode, onExit }) {
     if (endedByHp) setEndReason(`Jogador ${damagedPlayer + 1} ficou sem vida.`);
     else if (endedByTurns) setEndReason('Os 20 turnos terminaram.');
     setFeedback({ correct: acceptedCorrect, damage, timedOut: expired });
+    if (acceptedCorrect) playCorrect();
+    else playWrong();
     setPhase('feedback');
   }
 
@@ -263,61 +246,28 @@ export default function Game({ mode, onExit }) {
         locked.current = true;
         const earned = 4 - nextAttempt;
         setScore((value) => value + earned);
+        setCarHits((value) => value + 1);
         setFeedback({ correct: true, earned });
+        playCorrect();
         setPhase('feedback');
       } else {
+        setPerfectRun(false);
         wrongNow.current = [...wrongNow.current, color];
         setWrongColors(wrongNow.current);
+        playWrong();
         if (nextAttempt === 3) {
           locked.current = true;
           setFeedback({ correct: false, earned: 0 });
           setPhase('feedback');
         }
       }
-    } else if (isClassic) {
-      if (locked.current) return;
-      if (mode === 'survival' && Date.now() >= survivalDeadline.current) {
-        locked.current = true;
-        setSurvivalRemaining(0);
-        setEndReason('Os 3 minutos terminaram.');
-        setPhase('ended');
-        return;
-      }
-      locked.current = true;
-      const correct = color === current.correctColor;
-      if (mode === 'survival') setSurvivalQuestionsAnswered((value) => value + 1);
-      if (correct) {
-        const earned = mode === 'survival' ? Math.round(100 * 1.1 ** streak) : 1;
-        setScore((value) => value + earned);
-        if (mode === 'survival') setStreak((value) => value + 1);
-        setCarHits((value) => value + 1);
-        setFeedback({ correct: true, earned });
-      }
-      else {
-        if (mode === 'survival') setStreak(0);
-        else setLives((value) => value - 1);
-        setFeedback({ correct: false, earned: 0 });
-      }
-      setPhase('feedback');
     } else if (isPvp) {
       resolvePvp(color === current.correctColor);
     }
   }
 
   function advance() {
-    if (mode === 'survival' && Date.now() >= survivalDeadline.current) {
-      locked.current = true;
-      setSurvivalRemaining(0);
-      setEndReason('Os 3 minutos terminaram.');
-      setPhase('ended');
-      return;
-    }
     if (isBasic && position + 1 === deck.length) {
-      setPhase('ended');
-      return;
-    }
-    if (mode === 'challenge' && (position + 1 === deck.length || lives === 0)) {
-      setEndReason(lives === 0 ? 'As vidas acabaram.' : 'As 50 perguntas terminaram.');
       setPhase('ended');
       return;
     }
@@ -325,12 +275,7 @@ export default function Game({ mode, onExit }) {
       setPhase('ended');
       return;
     }
-    if (mode === 'survival' && position + 1 === deck.length) {
-      setDeck(shuffledQuestions());
-      setPosition(0);
-    } else {
-      setPosition((value) => value + 1);
-    }
+    setPosition((value) => value + 1);
     setFeedback(null);
     locked.current = false;
     if (isBasic) {
@@ -339,11 +284,7 @@ export default function Game({ mode, onExit }) {
       setAttempts(0);
       setWrongColors([]);
       setPhase('playing');
-    } else if (isPvp) {
-      setPhase('ready');
-    } else {
-      setPhase('playing');
-    }
+    } else if (isPvp) setPhase('ready');
   }
 
   const noQuestions = phase !== 'select' && deck.length === 0;
@@ -353,18 +294,18 @@ export default function Game({ mode, onExit }) {
       <Text style={[styles.feedbackTitle, !feedback.correct && styles.feedbackError]}>
         {isPvp
           ? feedback.correct ? 'Acertou! O adversário perdeu 15 HP.' : feedback.timedOut ? `Tempo esgotado! Você perdeu ${feedback.damage} HP.` : `Errou! Você perdeu ${feedback.damage} HP.`
-          : feedback.correct ? `Acertou! +${feedback.earned} ${feedback.earned === 1 ? 'ponto' : 'pontos'}` : isBasic ? 'Fim das tentativas · 0 pontos' : mode === 'survival' ? 'Errou! Sequência zerada. Continue jogando.' : 'Errou! Perdeu uma vida.'}
+          : feedback.correct ? `Acertou! +${feedback.earned} ${feedback.earned === 1 ? 'ponto' : 'pontos'}` : 'Três tentativas usadas · 0 pontos.'}
       </Text>
       {!feedback.correct && <Text style={styles.feedbackDetail}>Resposta: {COLORS[current.correctColor]?.label || current.correctColor}.</Text>}
-      <Button label={lastTurn || (isBasic && position + 1 === deck.length) || (mode === 'challenge' && (lives === 0 || position + 1 === deck.length)) || (mode === 'survival' && survivalRemaining === 0) ? 'Ver resultado' : isPvp ? 'Próximo jogador' : 'Próxima pergunta'} onPress={advance} />
+      <Button label={lastTurn || (isBasic && position + 1 === deck.length) ? 'Ver resultado' : isPvp ? 'Próximo jogador' : 'Próxima pergunta'} onPress={advance} />
     </View>
   ) : (
-    <Text style={styles.hint}>
-      {isBasic ? attempts === 0 ? 'Você tem 3 tentativas.' : `${3 - attempts} ${3 - attempts === 1 ? 'tentativa restante' : 'tentativas restantes'}.` : isPvp ? 'Acerto tira 15 HP do rival. Erro e tempo esgotado reduzem seu HP.' : mode === 'survival' ? `Próximo acerto: ${Math.round(100 * 1.1 ** streak)} pontos. Erros zeram a sequência.` : 'Uma resposta por pergunta. Cada acerto vale 1 ponto.'}
+    <Text style={[styles.hint, isBasic && attempts > 0 && styles.feedbackError]} accessibilityLiveRegion="polite">
+      {isBasic ? attempts === 0 ? 'Você tem 3 tentativas.' : `Errou! Restam ${3 - attempts} ${3 - attempts === 1 ? 'tentativa' : 'tentativas'}.` : 'Acerto tira 15 HP do rival. Erro e tempo esgotado reduzem seu HP.'}
     </Text>
   ));
 
-  const pinnedGameplay = current && (isPvp || isClassic) && (phase === 'playing' || phase === 'feedback');
+  const pinnedGameplay = current && (phase === 'playing' || phase === 'feedback');
   const gameHeader = (
     <View style={[styles.header, styles.pinnedHeader]}>
       <View style={styles.headerRow}>
@@ -383,34 +324,45 @@ export default function Game({ mode, onExit }) {
       {pinnedGameplay ? (
         <View style={[styles.pinnedLayout, narrow && styles.pinnedNarrow]}>
           {gameHeader}
-          {mode === 'survival' ? (
-            <View style={[styles.survivalHud, styles.pinnedHud]}>
-              <View style={[styles.survivalTimerBox, styles.pinnedTimerBox, survivalRemaining <= 30 && styles.survivalTimerUrgent]} accessibilityLabel={`Tempo restante: ${Math.floor(survivalRemaining / 60)} minutos e ${survivalRemaining % 60} segundos`}>
-                <Text style={styles.survivalHudLabel}>TEMPO RESTANTE</Text>
-                <Text style={[styles.survivalTimerValue, survivalRemaining <= 30 && styles.survivalTimerValueUrgent]}>{Math.floor(survivalRemaining / 60)}:{String(survivalRemaining % 60).padStart(2, '0')}</Text>
-              </View>
-              <View style={[styles.survivalScoreBox, styles.pinnedTimerBox]}>
-                <Text style={styles.survivalHudLabel}>PONTOS</Text>
-                <Text style={styles.survivalScoreValue} numberOfLines={1} adjustsFontSizeToFit>{score}</Text>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.statsRow}>
-              <Text style={styles.tag}>{isPvp ? `JOGADOR ${playerIndex + 1}` : `VIDAS ${'♥'.repeat(Math.max(0, lives))}`}</Text>
-              <Text style={styles.statValue}>{isPvp ? `${remaining}s` : `${score} pts`}</Text>
-            </View>
-          )}
-          <View style={styles.track}><View style={[styles.fill, { width: `${mode === 'survival' ? (survivalRemaining / SURVIVAL_SECONDS) * 100 : ((position + 1) / deck.length) * 100}%` }]} /></View>
-          <Text style={[styles.progress, styles.pinnedProgress]}>{mode === 'survival' ? `Pergunta ${survivalQuestionsAnswered + (phase === 'feedback' ? 0 : 1)} · ${streak} acertos em sequência` : `${isPvp ? 'Turno' : 'Pergunta'} ${position + 1} de ${deck.length}`}</Text>
+          <View style={styles.statsRow}>
+            <Text style={styles.tag}>{isPvp ? `JOGADOR ${playerIndex + 1}` : `PROGRAMA ${program?.id}`}</Text>
+            <Text style={styles.statValue}>{isPvp ? `${remaining}s` : `${score} pts`}</Text>
+          </View>
+          <View style={styles.track}><View style={[styles.fill, { width: `${((position + 1) / deck.length) * 100}%` }]} /></View>
+          <Text style={[styles.progress, styles.pinnedProgress]}>{isPvp ? 'Turno' : 'Questão'} {position + 1} de {deck.length}</Text>
           <ScrollView key={`${mode}-${position}`} style={styles.questionScroll} contentContainerStyle={styles.questionScrollContent}>
-            <View style={[styles.questionCard, compact && styles.questionCardCompact, styles.pinnedQuestionCard]}>
-              <Text style={styles.questionNumber}>QUESTÃO {String(current.number).padStart(2, '0')}</Text>
-              <Text accessibilityRole="header" style={[styles.question, compact && styles.questionCompact]}>{current.prompt}</Text>
+            <View style={[styles.questionCard, compact && styles.questionCardCompact, styles.pinnedQuestionCard, isBasic && styles.bookQuestionCard]}>
+              {isBasic ? (
+                <>
+                  <Text style={styles.questionNumber}>QUESTÃO DO LIVRO</Text>
+                  <Text accessibilityRole="header" style={styles.bookQuestionNumber}>{String(current.number).padStart(2, '0')}</Text>
+                  <Text style={styles.bookQuestionHint}>Leia a pergunta e as alternativas no livro.</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.questionNumber}>QUESTÃO {String(current.number).padStart(2, '0')}</Text>
+                  <Text accessibilityRole="header" style={[styles.question, compact && styles.questionCompact]}>{current.prompt}</Text>
+                </>
+              )}
             </View>
             {phase === 'playing' && (
               <>
-                <Text style={styles.choiceTitle}>Escolha a resposta pela cor</Text>
-                {current.options.map((option) => {
+                <Text style={styles.choiceTitle}>{isBasic ? 'Toque na cor da resposta' : 'Escolha a resposta pela cor'}</Text>
+                {isBasic ? (
+                  <View style={styles.colorGrid}>
+                    {Object.entries(COLORS).map(([key, color]) => {
+                      const rejected = wrongColors.includes(key);
+                      return (
+                        <TouchableOpacity key={key} accessibilityRole="button" accessibilityLabel={`Resposta ${color.label.toLowerCase()}`}
+                          accessibilityState={{ disabled: rejected }} disabled={rejected}
+                          onPress={() => answer(key)} activeOpacity={0.8}
+                          style={[styles.colorKey, { backgroundColor: color.hex }, rejected && styles.colorKeyRejected]}>
+                          {rejected && <Text style={styles.colorKeyCross}>×</Text>}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ) : current.options.map((option) => {
                   const color = COLORS[option.color] || { label: option.color, hex: '#64748B' };
                   return (
                     <TouchableOpacity key={option.color} accessibilityRole="button"
@@ -438,8 +390,8 @@ export default function Game({ mode, onExit }) {
                 <HealthBars hp={hp} compact />
               </>
             ) : (
-              <BonusCarStage character={selectedClassicCharacter} compactViewport={height < 720}
-                targetHits={mode === 'survival' ? 15 : 45}
+              <BonusCarStage character={selectedBasicCharacter} compactViewport={height < 720}
+                targetHits={30}
                 event={phase === 'feedback' && feedback?.correct ? { id: position } : null} score={carHits} />
             )}
             {phase === 'feedback' && responseStatus}
@@ -466,24 +418,24 @@ export default function Game({ mode, onExit }) {
         ) : phase === 'select' && isBasic ? (
           <View>
             <Text accessibilityRole="header" style={[styles.heading, compact && styles.headingCompact]}>Escolha um programa</Text>
-            <Text style={styles.muted}>30 perguntas · 3 tentativas por pergunta · até 90 pontos</Text>
+            <Text style={styles.muted}>Pegue o livro e escolha um programa. São 30 perguntas, com até 3 tentativas por questão e 100 pontos possíveis.</Text>
             {(book.programs || []).map((item) => (
               <TouchableOpacity key={item.id} accessibilityRole="button"
-                accessibilityLabel={`Iniciar programa ${item.id}, código ${item.code}`}
+                accessibilityLabel={`Iniciar programa ${item.id}`}
                 onPress={() => chooseProgram(item)} activeOpacity={0.8} style={[styles.program, compact && styles.programCompact]}>
                 <View style={styles.badge}><Text style={styles.badgeText}>{item.id}</Text></View>
                 <View style={styles.programCopy}>
                   <Text style={styles.programName}>Programa {item.id}</Text>
-                  <Text style={styles.mutedSmall}>Código {item.code} · {item.questions.length} perguntas</Text>
+                  <Text style={styles.mutedSmall}>{item.questions.length} perguntas do livro</Text>
                 </View>
                 <Text style={styles.arrow}>›</Text>
               </TouchableOpacity>
             ))}
           </View>
-        ) : phase === 'characterSelect' && isClassic ? (
+        ) : phase === 'characterSelect' && isBasic ? (
           <View>
             <Text accessibilityRole="header" style={[styles.heading, compact && styles.headingCompact]}>Escolha seu lutador</Text>
-            <Text style={styles.muted}>{mode === 'survival' ? 'Você tem 3 minutos. Cada acerto aumenta o valor do próximo em 1,1x. Erros zeram a sequência, mas você mantém os pontos.' : 'Seu personagem vai atacar o carro a cada resposta certa.'}</Text>
+            <Text style={styles.muted}>Programa {program?.id}. A cada resposta certa, seu lutador ataca o carro.</Text>
             <View style={styles.characterGrid}>
               {COMBAT_CHARACTERS.map((character) => (
                 <TouchableOpacity key={character.id} accessibilityRole="button"
@@ -549,13 +501,13 @@ export default function Game({ mode, onExit }) {
               </>
             ) : (
               <>
-                <Text style={styles.bigScore}>{score}<Text style={styles.outOf}>{mode === 'survival' ? ' pts' : ` / ${isBasic ? deck.length * 3 : CLASSIC_LENGTH}`}</Text></Text>
-                <Text style={styles.body}>{isBasic ? `Programa ${program?.id} · Código ${program?.code}` : endReason}</Text>
+                <Text style={styles.bigScore}>{finalScore}<Text style={styles.outOf}> / 100</Text></Text>
+                <Text style={styles.body}>Programa {program?.id}{perfectRun ? ' · Bônus perfeito: +10 pontos!' : ''}</Text>
               </>
             )}
             <Button label={isBasic ? 'Jogar programa novamente' : 'Jogar novamente'}
               onPress={() => {
-                if (isBasic) chooseProgram(program);
+                if (isBasic) replayBasic();
                 else if (isPvp) {
                   setDeck(shuffledQuestions(PVP_TURNS));
                   setPosition(0);
@@ -564,38 +516,15 @@ export default function Game({ mode, onExit }) {
                   setLastTurn(false);
                   setEndReason('');
                   setPhase('ready');
-                } else {
-                  setDeck(shuffledQuestions(mode === 'survival' ? undefined : CLASSIC_LENGTH));
-                  setPosition(0);
-                  setScore(0);
-                  setStreak(0);
-                  setSurvivalQuestionsAnswered(0);
-                  setSurvivalRemaining(SURVIVAL_SECONDS);
-                  if (mode === 'survival') survivalDeadline.current = Date.now() + SURVIVAL_SECONDS * 1000;
-                  setCarHits(0);
-                  setLives(mode === 'challenge' ? 3 : 0);
-                  setFeedback(null);
-                  locked.current = false;
-                  setEndReason('');
-                  setPhase('playing');
                 }
               }}
             />
-            {isClassic && <Button label="Trocar lutador" secondary onPress={() => {
-              setSelectedClassicCharacter(null);
-              setDeck(shuffledQuestions(mode === 'survival' ? undefined : CLASSIC_LENGTH));
-              setPosition(0);
-              setScore(0);
-              setStreak(0);
-              setSurvivalQuestionsAnswered(0);
-              setSurvivalRemaining(SURVIVAL_SECONDS);
-              survivalDeadline.current = 0;
-              setCarHits(0);
-              setLives(mode === 'challenge' ? 3 : 0);
-              setFeedback(null);
-              locked.current = false;
-              setEndReason('');
-              setPhase('characterSelect');
+            {isBasic && <Button label="Trocar lutador" secondary onPress={() => replayBasic('characterSelect')} />}
+            {isBasic && <Button label="Trocar programa" secondary onPress={() => {
+              setProgram(null);
+              setDeck([]);
+              setSelectedBasicCharacter(null);
+              setPhase('select');
             }} />}
             {isPvp && <Button label="Trocar personagens" secondary onPress={() => {
               setCharacters([null, null]);
@@ -610,40 +539,6 @@ export default function Game({ mode, onExit }) {
             }} />}
             <Button label="Voltar ao início" secondary onPress={onExit} />
           </View>
-        ) : current ? (
-          <View>
-            <View style={styles.statsRow}>
-              <Text style={styles.tag}>{`PROGRAMA ${program?.id} · ${program?.code}`}</Text>
-              <Text style={styles.statValue}>{score} pts</Text>
-            </View>
-            <View style={styles.track}><View style={[styles.fill, { width: `${((position + 1) / deck.length) * 100}%` }]} /></View>
-            <Text style={styles.progress}>{`Pergunta ${position + 1} de ${deck.length}`}</Text>
-            <View style={[styles.questionCard, compact && styles.questionCardCompact]}>
-              <Text style={styles.questionNumber}>QUESTÃO {String(current.number).padStart(2, '0')}</Text>
-              <Text accessibilityRole="header" style={[styles.question, compact && styles.questionCompact]}>{current.prompt}</Text>
-            </View>
-            {phase === 'feedback' && responseStatus}
-            <Text style={styles.choiceTitle}>Escolha a resposta pela cor</Text>
-            {current.options.map((option) => {
-              const color = COLORS[option.color] || { label: option.color, hex: '#64748B' };
-              const rejected = wrongColors.includes(option.color);
-              const right = phase === 'feedback' && option.color === current.correctColor;
-              return (
-                <TouchableOpacity key={option.color} accessibilityRole="button"
-                  accessibilityLabel={`${color.label}: ${option.text}`}
-                  accessibilityState={{ disabled: phase !== 'playing' || rejected }}
-                  disabled={phase !== 'playing' || rejected}
-                  activeOpacity={0.8} onPress={() => answer(option.color)}
-                  style={[styles.option, compact && styles.optionCompact, rejected && styles.rejected, right && styles.right]}>
-                  <View style={[styles.swatch, compact && styles.swatchCompact, { backgroundColor: color.hex }]} />
-                  <View style={styles.optionCopy}><Text style={styles.optionText}>{option.text}</Text></View>
-                  {rejected && <Text style={styles.wrongIcon}>×</Text>}
-                  {right && <Text style={styles.rightIcon}>✓</Text>}
-                </TouchableOpacity>
-              );
-            })}
-            {phase !== 'feedback' && responseStatus}
-          </View>
         ) : null}
       </ScrollView>
       )}
@@ -657,8 +552,6 @@ const styles = StyleSheet.create({
   pinnedNarrow: { paddingHorizontal: 12 },
   pinnedHeader: { paddingTop: 4, paddingBottom: 6 },
   pinnedTitle: { fontSize: 19, marginTop: 0 },
-  pinnedHud: { marginBottom: 6 },
-  pinnedTimerBox: { minHeight: 76, paddingVertical: 5 },
   pinnedProgress: { marginTop: 5, marginBottom: 2 },
   questionScroll: { flex: 1, minHeight: 0 },
   questionScrollContent: { paddingBottom: 8 },
@@ -700,14 +593,6 @@ const styles = StyleSheet.create({
   tag: { color: '#F4C762', fontSize: 12, fontWeight: '800', letterSpacing: 0.8 },
   statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   statValue: { color: '#FFFFFF', fontSize: 17, fontWeight: '800' },
-  survivalHud: { flexDirection: 'row', gap: 10, marginBottom: 14 },
-  survivalTimerBox: { flex: 1.25, minWidth: 0, minHeight: 90, paddingHorizontal: 14, paddingVertical: 10, justifyContent: 'center', borderRadius: 14, borderWidth: 2, borderColor: '#F4C762', backgroundColor: '#302C2E' },
-  survivalTimerUrgent: { borderColor: '#F07878', backgroundColor: '#3B262B' },
-  survivalScoreBox: { flex: 1, minWidth: 0, minHeight: 90, paddingHorizontal: 14, paddingVertical: 10, justifyContent: 'center', borderRadius: 14, borderWidth: 1, borderColor: '#46546C', backgroundColor: '#232D3D' },
-  survivalHudLabel: { color: '#B7C2D4', fontSize: 10, fontWeight: '800', letterSpacing: 0.7 },
-  survivalTimerValue: { color: '#F4C762', fontSize: 34, lineHeight: 39, fontWeight: '900', fontVariant: ['tabular-nums'] },
-  survivalTimerValueUrgent: { color: '#FF9999' },
-  survivalScoreValue: { color: '#FFFFFF', fontSize: 26, lineHeight: 34, fontWeight: '900' },
   hpRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 15, padding: 12, borderRadius: 11, backgroundColor: '#2C3A50' },
   hpRowCompact: { marginVertical: 6, padding: 8 },
   hpColumn: { width: '48%' },
@@ -719,20 +604,23 @@ const styles = StyleSheet.create({
   progress: { color: '#B7C2D4', fontSize: 12, fontWeight: '600', marginTop: 8 },
   questionCard: { backgroundColor: '#202B3D', borderColor: '#34425A', borderWidth: 1, borderRadius: 17, padding: 21, marginVertical: 18 },
   questionCardCompact: { padding: 14, marginTop: 12, marginBottom: 12 },
+  bookQuestionCard: { alignItems: 'center', paddingVertical: 10 },
+  bookQuestionNumber: { color: '#FFFFFF', fontSize: 48, lineHeight: 54, fontWeight: '900' },
+  bookQuestionHint: { color: '#C5D0E0', fontSize: 13, textAlign: 'center' },
   questionNumber: { color: '#F4C762', fontSize: 11, fontWeight: '800', letterSpacing: 1.2, marginBottom: 11 },
   question: { color: '#FFFFFF', fontSize: 20, fontWeight: '700', lineHeight: 28 },
   questionCompact: { fontSize: 18, lineHeight: 25 },
   choiceTitle: { color: '#D8E1EF', fontSize: 13, fontWeight: '700', marginBottom: 12 },
   option: { backgroundColor: '#F7F9FC', borderColor: 'transparent', borderWidth: 2, borderRadius: 13, minHeight: 64, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center' },
   optionCompact: { minHeight: 54, padding: 8, marginBottom: 7 },
-  rejected: { opacity: 0.48 },
-  right: { borderColor: '#55B88B' },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 9 },
+  colorKey: { width: '48%', minHeight: 58, borderRadius: 12, borderWidth: 2, borderColor: '#FFFFFF55', alignItems: 'center', justifyContent: 'center' },
+  colorKeyRejected: { opacity: 0.35 },
+  colorKeyCross: { color: '#FFFFFF', fontSize: 29, fontWeight: '900' },
   swatch: { width: 33, height: 33, borderRadius: 9, marginRight: 12 },
   swatchCompact: { width: 30, height: 30, marginRight: 9 },
   optionCopy: { flex: 1 },
   optionText: { color: '#172235', fontSize: 15, fontWeight: '600', lineHeight: 20 },
-  wrongIcon: { color: '#9B2731', fontSize: 24 },
-  rightIcon: { color: '#278963', fontSize: 22 },
   feedbackBox: { paddingTop: 8 },
   feedbackTitle: { color: '#80D8A9', fontSize: 17, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
   feedbackError: { color: '#FFB0A7' },
