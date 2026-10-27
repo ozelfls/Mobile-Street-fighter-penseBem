@@ -316,6 +316,9 @@ export default function Game({ mode, onExit }) {
   ));
 
   const pinnedGameplay = current && (phase === 'playing' || phase === 'feedback');
+  const basicShort = height < 650;
+  const basicTiny = height < 570;
+  const basicArenaHeight = basicTiny ? Math.max(72, height * 0.17 - 8) : Math.max(82, Math.min(168, height * 0.22 - 8));
   const gameHeader = (
     <View style={[styles.header, styles.pinnedHeader]}>
       <View style={styles.headerRow}>
@@ -333,46 +336,73 @@ export default function Game({ mode, onExit }) {
       <StatusBar barStyle="light-content" backgroundColor="#111827" />
       {pinnedGameplay ? (
         <View style={[styles.pinnedLayout, narrow && styles.pinnedNarrow]}>
+          {isBasic ? (
+            <>
+              <View style={styles.basicHeader}>
+                <Text style={styles.basicBrand}>PENSE BEM <Text style={styles.basicBrandMode}>/ BÁSICO</Text></Text>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Sair para o início" onPress={onExit} style={styles.exitButton}>
+                  <Text style={styles.exit}>Sair</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.basicHud}>
+                <Text style={styles.basicHudLabel}>PROGRAMA {program?.id}  ·  QUESTÃO {position + 1}/{deck.length}</Text>
+                <Text style={styles.basicScore}>{score} <Text style={styles.basicScoreLabel}>PTS</Text></Text>
+              </View>
+              <View style={styles.track}><View style={[styles.fill, { width: `${((position + 1) / deck.length) * 100}%` }]} /></View>
+              <View style={[styles.basicBookCard, basicShort && styles.basicBookCardShort, basicTiny && styles.basicBookCardTiny]}>
+                <View>
+                  <Text style={styles.basicBookEyebrow}>ENCONTRE NO LIVRO</Text>
+                  <Text style={styles.basicBookCaption}>Questão</Text>
+                </View>
+                <Text accessibilityRole="header" style={[styles.basicBookNumber, basicShort && styles.basicBookNumberShort, basicTiny && styles.basicBookNumberTiny]}>{String(current.number).padStart(2, '0')}</Text>
+              </View>
+              <View style={[styles.basicActionArea, basicShort && styles.basicActionAreaShort, basicTiny && styles.basicActionAreaTiny]}>
+                {phase === 'playing' ? (
+                  <>
+                    <Text style={styles.basicChoiceTitle}>TOQUE NA COR DA RESPOSTA</Text>
+                    <View style={styles.colorGrid}>
+                      {Object.entries(COLORS).map(([key, color]) => {
+                        const rejected = wrongColors.includes(key);
+                        return (
+                          <TouchableOpacity key={key} accessibilityRole="button" accessibilityLabel={`Resposta ${color.label.toLowerCase()}`}
+                            accessibilityState={{ disabled: rejected }} disabled={rejected}
+                            onPress={() => answer(key)} activeOpacity={0.8}
+                            style={[styles.colorKey, basicShort && styles.colorKeyShort, basicTiny && styles.colorKeyTiny, { backgroundColor: color.hex }, rejected && styles.colorKeyRejected]}>
+                            {rejected && <Text style={styles.colorKeyCross}>×</Text>}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    <Text style={[styles.basicAttempt, attempts > 0 && styles.feedbackError]} accessibilityLiveRegion="polite">
+                      {attempts === 0 ? 'Você tem 3 tentativas.' : `Errou! Restam ${3 - attempts} ${3 - attempts === 1 ? 'tentativa' : 'tentativas'}.`}
+                    </Text>
+                  </>
+                ) : responseStatus}
+              </View>
+              <View style={styles.basicArena}>
+                <BonusCarStage character={selectedBasicCharacter} targetHits={30} maxHeight={basicArenaHeight} compactViewport
+                  event={phase === 'feedback' && feedback?.correct ? { id: position } : null} score={carHits}
+                  onAttackComplete={handleAttackComplete} />
+              </View>
+            </>
+          ) : (
+          <>
           {gameHeader}
           <View style={styles.statsRow}>
-            <Text style={styles.tag}>{isPvp ? `JOGADOR ${playerIndex + 1}` : `PROGRAMA ${program?.id}`}</Text>
-            <Text style={styles.statValue}>{isPvp ? `${remaining}s` : `${score} pts`}</Text>
+            <Text style={styles.tag}>{`JOGADOR ${playerIndex + 1}`}</Text>
+            <Text style={styles.statValue}>{`${remaining}s`}</Text>
           </View>
           <View style={styles.track}><View style={[styles.fill, { width: `${((position + 1) / deck.length) * 100}%` }]} /></View>
-          <Text style={[styles.progress, styles.pinnedProgress]}>{isPvp ? 'Turno' : 'Questão'} {position + 1} de {deck.length}</Text>
+          <Text style={[styles.progress, styles.pinnedProgress]}>Turno {position + 1} de {deck.length}</Text>
           <ScrollView key={`${mode}-${position}`} style={styles.questionScroll} contentContainerStyle={styles.questionScrollContent}>
-            <View style={[styles.questionCard, compact && styles.questionCardCompact, styles.pinnedQuestionCard, isBasic && styles.bookQuestionCard]}>
-              {isBasic ? (
-                <>
-                  <Text style={styles.questionNumber}>QUESTÃO DO LIVRO</Text>
-                  <Text accessibilityRole="header" style={styles.bookQuestionNumber}>{String(current.number).padStart(2, '0')}</Text>
-                  <Text style={styles.bookQuestionHint}>Leia a pergunta e as alternativas no livro.</Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.questionNumber}>QUESTÃO {String(current.number).padStart(2, '0')}</Text>
-                  <Text accessibilityRole="header" style={[styles.question, compact && styles.questionCompact]}>{current.prompt}</Text>
-                </>
-              )}
+            <View style={[styles.questionCard, compact && styles.questionCardCompact, styles.pinnedQuestionCard]}>
+              <Text style={styles.questionNumber}>QUESTÃO {String(current.number).padStart(2, '0')}</Text>
+              <Text accessibilityRole="header" style={[styles.question, compact && styles.questionCompact]}>{current.prompt}</Text>
             </View>
             {phase === 'playing' && (
               <>
-                <Text style={styles.choiceTitle}>{isBasic ? 'Toque na cor da resposta' : 'Escolha a resposta pela cor'}</Text>
-                {isBasic ? (
-                  <View style={styles.colorGrid}>
-                    {Object.entries(COLORS).map(([key, color]) => {
-                      const rejected = wrongColors.includes(key);
-                      return (
-                        <TouchableOpacity key={key} accessibilityRole="button" accessibilityLabel={`Resposta ${color.label.toLowerCase()}`}
-                          accessibilityState={{ disabled: rejected }} disabled={rejected}
-                          onPress={() => answer(key)} activeOpacity={0.8}
-                          style={[styles.colorKey, { backgroundColor: color.hex }, rejected && styles.colorKeyRejected]}>
-                          {rejected && <Text style={styles.colorKeyCross}>×</Text>}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                ) : current.options.map((option) => {
+                <Text style={styles.choiceTitle}>Escolha a resposta pela cor</Text>
+                {current.options.map((option) => {
                   const color = COLORS[option.color] || { label: option.color, hex: '#64748B' };
                   return (
                     <TouchableOpacity key={option.color} accessibilityRole="button"
@@ -389,24 +419,17 @@ export default function Game({ mode, onExit }) {
             )}
           </ScrollView>
           <View style={styles.pinnedBottom}>
-            {isPvp ? (
-              <>
-                <CombatStage characters={characters} compactViewport={height < 720}
-                  event={phase === 'feedback' && feedback ? {
-                    id: position,
-                    attacker: feedback.correct ? playerIndex : 1 - playerIndex,
-                    hurt: feedback.correct ? 1 - playerIndex : playerIndex,
-                  } : null} />
-                <HealthBars hp={hp} compact />
-              </>
-            ) : (
-              <BonusCarStage character={selectedBasicCharacter} compactViewport={height < 720}
-                targetHits={30}
-                event={phase === 'feedback' && feedback?.correct ? { id: position } : null} score={carHits}
-                onAttackComplete={handleAttackComplete} />
-            )}
+            <CombatStage characters={characters} compactViewport={height < 720}
+              event={phase === 'feedback' && feedback ? {
+                id: position,
+                attacker: feedback.correct ? playerIndex : 1 - playerIndex,
+                hurt: feedback.correct ? 1 - playerIndex : playerIndex,
+              } : null} />
+            <HealthBars hp={hp} compact />
             {phase === 'feedback' && responseStatus}
           </View>
+          </>
+          )}
         </View>
       ) : (
       <ScrollView ref={scrollRef}
@@ -568,6 +591,27 @@ const styles = StyleSheet.create({
   questionScrollContent: { paddingBottom: 8 },
   pinnedQuestionCard: { marginTop: 6, marginBottom: 9, padding: 12 },
   pinnedBottom: { flexShrink: 0 },
+  basicHeader: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  basicBrand: { color: '#F4C762', fontSize: 12, fontWeight: '900', letterSpacing: 1.2 },
+  basicBrandMode: { color: '#D8E1EF', fontWeight: '700' },
+  basicHud: { minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  basicHudLabel: { color: '#D8E1EF', fontSize: 11, fontWeight: '800', letterSpacing: 0.35, flexShrink: 1 },
+  basicScore: { color: '#F4C762', fontSize: 21, fontWeight: '900' },
+  basicScoreLabel: { fontSize: 10, fontWeight: '800' },
+  basicBookCard: { height: 108, marginTop: 10, marginBottom: 8, borderRadius: 17, backgroundColor: '#F4C762', paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  basicBookCardShort: { height: 82, marginTop: 7, marginBottom: 5, paddingHorizontal: 15 },
+  basicBookCardTiny: { height: 72, marginTop: 5, marginBottom: 4 },
+  basicBookEyebrow: { color: '#54401B', fontSize: 10, fontWeight: '900', letterSpacing: 1.1 },
+  basicBookCaption: { color: '#182235', fontSize: 21, fontWeight: '900', marginTop: 5 },
+  basicBookNumber: { color: '#182235', fontSize: 68, lineHeight: 78, fontWeight: '900' },
+  basicBookNumberShort: { fontSize: 53, lineHeight: 60 },
+  basicBookNumberTiny: { fontSize: 46, lineHeight: 52 },
+  basicActionArea: { flex: 1, minHeight: 188, justifyContent: 'center' },
+  basicActionAreaShort: { minHeight: 170 },
+  basicActionAreaTiny: { minHeight: 150 },
+  basicChoiceTitle: { color: '#D8E1EF', fontSize: 11, fontWeight: '800', letterSpacing: 0.65, marginBottom: 9, textAlign: 'center' },
+  basicAttempt: { color: '#D8E1EF', fontSize: 13, lineHeight: 19, fontWeight: '700', textAlign: 'center', marginTop: 8 },
+  basicArena: { flexShrink: 0, paddingBottom: 5 },
   content: { flexGrow: 1, width: '100%', maxWidth: 680, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 36 },
   contentCompact: { paddingHorizontal: 16, paddingBottom: 22 },
   contentNarrow: { paddingHorizontal: 12 },
@@ -615,17 +659,16 @@ const styles = StyleSheet.create({
   progress: { color: '#B7C2D4', fontSize: 12, fontWeight: '600', marginTop: 8 },
   questionCard: { backgroundColor: '#202B3D', borderColor: '#34425A', borderWidth: 1, borderRadius: 17, padding: 21, marginVertical: 18 },
   questionCardCompact: { padding: 14, marginTop: 12, marginBottom: 12 },
-  bookQuestionCard: { alignItems: 'center', paddingVertical: 10 },
-  bookQuestionNumber: { color: '#FFFFFF', fontSize: 48, lineHeight: 54, fontWeight: '900' },
-  bookQuestionHint: { color: '#C5D0E0', fontSize: 13, textAlign: 'center' },
   questionNumber: { color: '#F4C762', fontSize: 11, fontWeight: '800', letterSpacing: 1.2, marginBottom: 11 },
   question: { color: '#FFFFFF', fontSize: 20, fontWeight: '700', lineHeight: 28 },
   questionCompact: { fontSize: 18, lineHeight: 25 },
   choiceTitle: { color: '#D8E1EF', fontSize: 13, fontWeight: '700', marginBottom: 12 },
   option: { backgroundColor: '#F7F9FC', borderColor: 'transparent', borderWidth: 2, borderRadius: 13, minHeight: 64, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center' },
   optionCompact: { minHeight: 54, padding: 8, marginBottom: 7 },
-  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 9 },
-  colorKey: { width: '48%', minHeight: 58, borderRadius: 12, borderWidth: 2, borderColor: '#FFFFFF55', alignItems: 'center', justifyContent: 'center' },
+  colorGrid: { width: '100%', maxWidth: 420, alignSelf: 'center', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 9 },
+  colorKey: { width: '48%', minHeight: 70, borderRadius: 14, borderWidth: 3, borderColor: '#FFFFFF88', alignItems: 'center', justifyContent: 'center' },
+  colorKeyShort: { minHeight: 56 },
+  colorKeyTiny: { minHeight: 48 },
   colorKeyRejected: { opacity: 0.35 },
   colorKeyCross: { color: '#FFFFFF', fontSize: 29, fontWeight: '900' },
   swatch: { width: 33, height: 33, borderRadius: 9, marginRight: 12 },

@@ -15,8 +15,8 @@ const MODES = [
     key: 'basic',
     number: '01',
     title: 'Básico',
-    description: 'Jogue com o livro físico: escolha um programa e um lutador, responda 30 questões e destrua o carro a cada acerto.',
-    detail: '3 tentativas · até 100 pontos',
+    description: 'Ache a questão no livro, toque na cor da resposta e avance na luta contra o carro.',
+    detail: '30 questões · até 100 pontos',
     color: '#55B88B',
   },
   {
@@ -41,7 +41,7 @@ export default function Home({ onSelect }) {
         <View style={[styles.header, compact && styles.headerCompact]}>
           <Text style={styles.kicker}>PENSE BEM</Text>
           <Text style={[styles.title, narrow && styles.titleNarrow]}>Street Fighter II</Text>
-          <Text style={styles.subtitle}>Escolha como quer jogar. No Básico, acompanhe as questões no livro físico.</Text>
+          <Text style={styles.subtitle}>Escolha um modo para começar.</Text>
         </View>
 
         <Text style={[styles.sectionTitle, compact && styles.sectionTitleCompact]}>Modos de jogo</Text>
@@ -69,7 +69,6 @@ export default function Home({ onSelect }) {
             </View>
           </TouchableOpacity>
         ))}
-        <Text style={styles.footer}>Toque em um modo para começar.</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -136,5 +135,4 @@ const styles = StyleSheet.create({
   cardDescription: { color: '#C5D0E0', fontSize: 14, lineHeight: 20 },
   cardDescriptionCompact: { fontSize: 13, lineHeight: 18 },
   arrow: { fontSize: 32, marginLeft: 10 },
-  footer: { color: '#91A0B6', fontSize: 12, textAlign: 'center', marginTop: 10 },
 });

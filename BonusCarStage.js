@@ -40,16 +40,14 @@ const IMPACT_DELAY = { ryu: 160, ken: 700, chunli: 120, blanka: 130 };
 const STRIKE_MS = { ryu: 660, ken: 1100, chunli: 320, blanka: 540 };
 const STRIKES_PER_ANSWER = 4;
 
-export default function BonusCarStage({ character = 'ryu', event, score = 0, targetHits = 45, compactViewport = false, onAttackComplete }) {
+export default function BonusCarStage({ character = 'ryu', event, score = 0, targetHits = 45, compactViewport = false, maxHeight, onAttackComplete }) {
   const [attacking, setAttacking] = useState(false);
   const [strike, setStrike] = useState(0);
   const [impactVisible, setImpactVisible] = useState(false);
   const [displayHits, setDisplayHits] = useState(score);
   const shake = useRef(new Animated.Value(0)).current;
   const { height, width } = useWindowDimensions();
-  const scale = compactViewport
-    ? Math.min((width - 24) / 340, Math.max(0.52, Math.min(0.72, height / 1000)))
-    : Math.min(1.05, (width - 40) / 340, height / 780);
+  const scale = Math.min(1.05, (width - 24) / 340, height / 780, maxHeight ? maxHeight / 210 : 1.05);
   const fighter = SPRITES[character] ? character : 'ryu';
   const fighterName = COMBAT_CHARACTERS.find(({ id }) => id === fighter)?.name || 'Ryu';
   const eventId = event?.id;
