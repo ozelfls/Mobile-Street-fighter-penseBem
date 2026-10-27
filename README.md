@@ -20,7 +20,7 @@ Abra o QR code no Expo Go ou use as opções do Expo para Android, iOS ou navega
 
 ## Homologação para a aula
 
-[Pense Bem - Homologacao para testes](https://snack.expo.dev/QTO2uXVpZtVb_vxz64J9j?platform=web). Esta versão corresponde à `main` com o layout mobile e a cena do carro atualizados. É necessário acesso à internet para carregar o jogo e os sprites.
+[Pense Bem - Homologacao para testes](https://snack.expo.dev/KFs-2Su6DuZ46s55qzuRX?platform=web). Esta versão corresponde à `main` com o Básico pelo livro físico, quatro golpes por acerto e o PvP. É necessário acesso à internet para carregar o jogo, os sprites e os sons.
 
 ## Arquivos principais
 
