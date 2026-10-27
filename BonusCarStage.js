@@ -3,7 +3,7 @@ import { Animated, Image, StyleSheet, useWindowDimensions, View } from 'react-na
 import { COMBAT_CHARACTERS, SPRITES } from './CombatStage';
 
 const CAR_SHEET = require('./assets/combat/bonus-car-sprites.png');
-const HARBOR_STAGE = require('./assets/combat/car-bonus-harbor.gif');
+const DOCK_STAGE = require('./assets/combat/car-bonus-dock.png');
 const BONUS_ATTACKS = {
   ryu: require('./assets/combat/ryu-car-attack.gif'),
   ken: require('./assets/combat/ken-car-attack.gif'),
@@ -97,8 +97,8 @@ export default function BonusCarStage({ character = 'ryu', event, score = 0, tar
       accessible
       accessibilityLabel={`${fighterName} ${attacking ? 'atacando' : 'ao lado'} do carro bônus. ${score} acertos.`}
     >
-      <Image source={HARBOR_STAGE} resizeMode="stretch"
-        style={[styles.stageBackground, { width: 636 * scale, height: 479 * scale, left: -296 * scale, top: -229 * scale }]} />
+      <Image source={DOCK_STAGE} resizeMode="cover"
+        style={[styles.stageBackground, { width: 340 * scale, height: 210 * scale }]} />
       <Animated.View
         style={[
           styles.carWindow,
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginTop: 12,
   },
-  stageBackground: { position: 'absolute' },
+  stageBackground: { position: 'absolute', top: 0, left: 0 },
   carWindow: { position: 'absolute', overflow: 'hidden' },
   fighter: { position: 'absolute' },
   impact: { position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: '#F4C762BB' },
