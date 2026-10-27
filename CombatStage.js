@@ -35,7 +35,7 @@ const CHARACTER_NAMES = Object.fromEntries(COMBAT_CHARACTERS.map(({ id, name }) 
 const ATTACK_SIZE = {
   ryu: { width: 128, height: 258 },
   ken: { width: 130, height: 214 },
-  chunli: { width: 220, height: 133 },
+  chunli: { width: 315, height: 190 },
   blanka: { width: 220, height: 140 },
 };
 
