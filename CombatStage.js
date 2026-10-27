@@ -39,16 +39,17 @@ const ATTACK_SIZE = {
   blanka: { width: 220, height: 140 },
 };
 
-export default function CombatStage({ characters = ['ryu', 'ken'], event, compactViewport = false }) {
+export default function CombatStage({ characters = ['ryu', 'ken'], event, compactViewport = false, maxHeight }) {
   const [poses, setPoses] = useState(['idle', 'idle']);
   const [arenaWidth, setArenaWidth] = useState(360);
   const { height: windowHeight } = useWindowDimensions();
   const eventId = event?.id;
   const left = SPRITES[characters[0]] ? characters[0] : 'ryu';
   const right = SPRITES[characters[1]] ? characters[1] : 'ken';
-  const scale = compactViewport
+  const viewportScale = compactViewport
     ? Math.min(arenaWidth / 360, Math.max(0.45, Math.min(0.6, windowHeight / 1300)))
     : Math.max(0.64, Math.min(1.08, arenaWidth / 360, windowHeight / 800));
+  const scale = maxHeight ? Math.min(viewportScale, (maxHeight - 16) / 273) : viewportScale;
 
   function imageStyle(character, pose, side) {
     if (pose !== 'attack') {

@@ -25,7 +25,8 @@ const PVP_TURNS = 20;
 const TURN_SECONDS = 20;
 
 function shuffledQuestions(limit) {
-  const pool = (book.programs || []).flatMap((program) => program.questions || []);
+  const pool = (book.programs || []).flatMap((program) =>
+    (program.questions || []).map((question) => ({ ...question, programId: program.id })));
   for (let i = pool.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -54,11 +55,12 @@ function HealthBars({ hp, compact = false }) {
     <View style={[styles.hpRow, compact && styles.hpRowCompact]}>
       {hp.map((value, index) => (
         <View key={index} style={styles.hpColumn}>
-          <Text style={styles.hpText}>J{index + 1} · {value} HP</Text>
-          <View style={styles.hpTrack}>
+          <Text style={[styles.hpText, compact && styles.hpTextCompact]}>J{index + 1} · {value} HP</Text>
+          <View style={[styles.hpTrack, compact && styles.hpTrackCompact]}>
             <View
               style={[
                 styles.hpFill,
+                compact && styles.hpFillCompact,
                 {
                   width: `${value}%`,
                   backgroundColor: value > 50 ? '#55B88B' : value > 25 ? '#F4C762' : '#E77772',
@@ -299,7 +301,7 @@ export default function Game({ mode, onExit }) {
 
   const noQuestions = phase !== 'select' && deck.length === 0;
   const winner = hp[0] === hp[1] ? 0 : hp[0] > hp[1] ? 1 : 2;
-  const responseStatus = current && (phase === 'feedback' ? (
+  const responseStatus = current && phase === 'feedback' && (
     <View style={styles.feedbackBox} accessibilityLiveRegion="polite">
       <Text style={[styles.feedbackTitle, !feedback.correct && styles.feedbackError]}>
         {isPvp
@@ -309,127 +311,85 @@ export default function Game({ mode, onExit }) {
       {!feedback.correct && <Text style={styles.feedbackDetail}>Resposta: {COLORS[current.correctColor]?.label || current.correctColor}.</Text>}
       <Button label={comboActive ? 'Golpeando...' : lastTurn || (isBasic && position + 1 === deck.length) ? 'Ver resultado' : isPvp ? 'Próximo jogador' : 'Próxima pergunta'} onPress={advance} disabled={isBasic && comboActive} />
     </View>
-  ) : (
-    <Text style={[styles.hint, isBasic && attempts > 0 && styles.feedbackError]} accessibilityLiveRegion="polite">
-      {isBasic ? attempts === 0 ? 'Você tem 3 tentativas.' : `Errou! Restam ${3 - attempts} ${3 - attempts === 1 ? 'tentativa' : 'tentativas'}.` : 'Acerto tira 15 HP do rival. Erro e tempo esgotado reduzem seu HP.'}
-    </Text>
-  ));
+  );
 
   const pinnedGameplay = current && (phase === 'playing' || phase === 'feedback');
   const basicShort = height < 650;
   const basicTiny = height < 570;
   const basicArenaHeight = basicTiny ? Math.max(72, height * 0.17 - 8) : Math.max(82, Math.min(168, height * 0.22 - 8));
-  const gameHeader = (
-    <View style={[styles.header, styles.pinnedHeader]}>
-      <View style={styles.headerRow}>
-        <Text style={styles.kicker}>PENSE BEM · STREET FIGHTER II</Text>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Sair para o início" onPress={onExit} style={styles.exitButton}>
-          <Text style={styles.exit}>Sair</Text>
-        </TouchableOpacity>
-      </View>
-      <Text accessibilityRole="header" style={[styles.title, styles.pinnedTitle]}>{modeTitle}</Text>
-    </View>
-  );
+  const pvpArenaHeight = Math.max(92, Math.min(155, height * 0.22));
 
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="light-content" backgroundColor="#111827" />
       {pinnedGameplay ? (
         <View style={[styles.pinnedLayout, narrow && styles.pinnedNarrow]}>
-          {isBasic ? (
-            <>
-              <View style={styles.basicHeader}>
-                <Text style={styles.basicBrand}>PENSE BEM <Text style={styles.basicBrandMode}>/ BÁSICO</Text></Text>
-                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Sair para o início" onPress={onExit} style={styles.exitButton}>
-                  <Text style={styles.exit}>Sair</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.basicHud}>
-                <Text style={styles.basicHudLabel}>PROGRAMA {program?.id}  ·  QUESTÃO {position + 1}/{deck.length}</Text>
-                <Text style={styles.basicScore}>{score} <Text style={styles.basicScoreLabel}>PTS</Text></Text>
-              </View>
-              <View style={styles.track}><View style={[styles.fill, { width: `${((position + 1) / deck.length) * 100}%` }]} /></View>
-              <View style={[styles.basicBookCard, basicShort && styles.basicBookCardShort, basicTiny && styles.basicBookCardTiny]}>
-                <View>
-                  <Text style={styles.basicBookEyebrow}>ENCONTRE NO LIVRO</Text>
-                  <Text style={styles.basicBookCaption}>Questão</Text>
-                </View>
-                <Text accessibilityRole="header" style={[styles.basicBookNumber, basicShort && styles.basicBookNumberShort, basicTiny && styles.basicBookNumberTiny]}>{String(current.number).padStart(2, '0')}</Text>
-              </View>
-              <View style={[styles.basicActionArea, basicShort && styles.basicActionAreaShort, basicTiny && styles.basicActionAreaTiny]}>
-                {phase === 'playing' ? (
-                  <>
-                    <Text style={styles.basicChoiceTitle}>TOQUE NA COR DA RESPOSTA</Text>
-                    <View style={styles.colorGrid}>
-                      {Object.entries(COLORS).map(([key, color]) => {
-                        const rejected = wrongColors.includes(key);
-                        return (
-                          <TouchableOpacity key={key} accessibilityRole="button" accessibilityLabel={`Resposta ${color.label.toLowerCase()}`}
-                            accessibilityState={{ disabled: rejected }} disabled={rejected}
-                            onPress={() => answer(key)} activeOpacity={0.8}
-                            style={[styles.colorKey, basicShort && styles.colorKeyShort, basicTiny && styles.colorKeyTiny, { backgroundColor: color.hex }, rejected && styles.colorKeyRejected]}>
-                            {rejected && <Text style={styles.colorKeyCross}>×</Text>}
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                    <Text style={[styles.basicAttempt, attempts > 0 && styles.feedbackError]} accessibilityLiveRegion="polite">
-                      {attempts === 0 ? 'Você tem 3 tentativas.' : `Errou! Restam ${3 - attempts} ${3 - attempts === 1 ? 'tentativa' : 'tentativas'}.`}
-                    </Text>
-                  </>
-                ) : responseStatus}
-              </View>
-              <View style={styles.basicArena}>
-                <BonusCarStage character={selectedBasicCharacter} targetHits={30} maxHeight={basicArenaHeight} compactViewport
-                  event={phase === 'feedback' && feedback?.correct ? { id: position } : null} score={carHits}
-                  onAttackComplete={handleAttackComplete} />
-              </View>
-            </>
-          ) : (
-          <>
-          {gameHeader}
-          <View style={styles.statsRow}>
-            <Text style={styles.tag}>{`JOGADOR ${playerIndex + 1}`}</Text>
-            <Text style={styles.statValue}>{`${remaining}s`}</Text>
+          <View style={styles.basicHeader}>
+            <Text style={styles.basicBrand}>PENSE BEM <Text style={styles.basicBrandMode}>/ {isBasic ? 'BÁSICO' : 'PVP'}</Text></Text>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Sair para o início" onPress={onExit} style={styles.exitButton}>
+              <Text style={styles.exit}>Sair</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.basicHud}>
+            <Text style={styles.basicHudLabel}>{isBasic ? `QUESTÃO ${position + 1}/${deck.length}` : `JOGADOR ${playerIndex + 1}  ·  TURNO ${position + 1}/${deck.length}`}</Text>
+            <Text style={[styles.basicScore, isPvp && remaining <= 5 && styles.pvpTimerUrgent]}>
+              {isBasic ? score : remaining} <Text style={styles.basicScoreLabel}>{isBasic ? 'PTS' : 'S'}</Text>
+            </Text>
           </View>
           <View style={styles.track}><View style={[styles.fill, { width: `${((position + 1) / deck.length) * 100}%` }]} /></View>
-          <Text style={[styles.progress, styles.pinnedProgress]}>Turno {position + 1} de {deck.length}</Text>
-          <ScrollView key={`${mode}-${position}`} style={styles.questionScroll} contentContainerStyle={styles.questionScrollContent}>
-            <View style={[styles.questionCard, compact && styles.questionCardCompact, styles.pinnedQuestionCard]}>
-              <Text style={styles.questionNumber}>QUESTÃO {String(current.number).padStart(2, '0')}</Text>
-              <Text accessibilityRole="header" style={[styles.question, compact && styles.questionCompact]}>{current.prompt}</Text>
+          <View style={[styles.basicBookCard, basicShort && styles.basicBookCardShort, basicTiny && styles.basicBookCardTiny]}>
+            <View>
+              <Text style={styles.basicBookEyebrow}>QUESTÃO DO LIVRO</Text>
+              <Text style={styles.basicBookCaption}>Programa {isBasic ? program?.id : current.programId}</Text>
             </View>
+            <Text accessibilityRole="header" accessibilityLabel={`Programa ${isBasic ? program?.id : current.programId}, questão ${current.number}`}
+              style={[styles.basicBookNumber, basicShort && styles.basicBookNumberShort, basicTiny && styles.basicBookNumberTiny]}>
+              {String(current.number).padStart(2, '0')}
+            </Text>
+          </View>
+          <View style={[styles.basicActionArea, basicShort && styles.basicActionAreaShort, basicTiny && styles.basicActionAreaTiny]}>
             {phase === 'playing' && (
               <>
-                <Text style={styles.choiceTitle}>Escolha a resposta pela cor</Text>
-                {current.options.map((option) => {
-                  const color = COLORS[option.color] || { label: option.color, hex: '#64748B' };
-                  return (
-                    <TouchableOpacity key={option.color} accessibilityRole="button"
-                      accessibilityLabel={`${color.label}: ${option.text}`}
-                      onPress={() => answer(option.color)} activeOpacity={0.8}
-                      style={[styles.option, compact && styles.optionCompact]}>
-                      <View style={[styles.swatch, compact && styles.swatchCompact, { backgroundColor: color.hex }]} />
-                      <View style={styles.optionCopy}><Text style={styles.optionText}>{option.text}</Text></View>
-                    </TouchableOpacity>
-                  );
-                })}
-                {responseStatus}
+                <Text style={[styles.basicChoiceTitle, basicShort && styles.basicChoiceTitleShort]}>TOQUE NA COR DA RESPOSTA</Text>
+                <View style={styles.colorGrid}>
+                  {Object.entries(COLORS).map(([key, color]) => {
+                    const rejected = isBasic && wrongColors.includes(key);
+                    return (
+                      <TouchableOpacity key={key} accessibilityRole="button" accessibilityLabel={`Resposta ${color.label.toLowerCase()}`}
+                        accessibilityState={{ disabled: rejected }} disabled={rejected}
+                        onPress={() => answer(key)} activeOpacity={0.8}
+                        style={[styles.colorKey, basicShort && styles.colorKeyShort, basicTiny && styles.colorKeyTiny, { backgroundColor: color.hex }, rejected && styles.colorKeyRejected]}>
+                        {rejected && <Text style={styles.colorKeyCross}>×</Text>}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <Text style={[styles.basicAttempt, basicShort && styles.basicAttemptShort, isBasic && attempts > 0 && styles.feedbackError]} accessibilityLiveRegion="polite">
+                  {isBasic
+                    ? attempts === 0 ? 'Você tem 3 tentativas.' : `Errou! Restam ${3 - attempts} ${3 - attempts === 1 ? 'tentativa' : 'tentativas'}.`
+                    : 'Acerto: rival perde 15 HP. Erro: seu HP cai.'}
+                </Text>
               </>
             )}
-          </ScrollView>
-          <View style={styles.pinnedBottom}>
-            <CombatStage characters={characters} compactViewport={height < 720}
+            {phase === 'feedback' && responseStatus}
+          </View>
+          <View style={styles.basicArena}>
+            {isBasic ? (
+              <BonusCarStage character={selectedBasicCharacter} targetHits={30} maxHeight={basicArenaHeight} compactViewport
+                event={phase === 'feedback' && feedback?.correct ? { id: position } : null} score={carHits}
+                onAttackComplete={handleAttackComplete} />
+            ) : (
+              <>
+                <CombatStage characters={characters} compactViewport maxHeight={pvpArenaHeight}
               event={phase === 'feedback' && feedback ? {
                 id: position,
                 attacker: feedback.correct ? playerIndex : 1 - playerIndex,
                 hurt: feedback.correct ? 1 - playerIndex : playerIndex,
               } : null} />
-            <HealthBars hp={hp} compact />
-            {phase === 'feedback' && responseStatus}
+                <HealthBars hp={hp} compact />
+              </>
+            )}
           </View>
-          </>
-          )}
         </View>
       ) : (
       <ScrollView ref={scrollRef}
@@ -518,7 +478,17 @@ export default function Game({ mode, onExit }) {
           <View style={[styles.panel, compact && styles.panelCompact]}>
             <Text style={styles.tag}>TURNO {position + 1} DE {deck.length}</Text>
             <Text accessibilityRole="header" style={[styles.heading, compact && styles.headingCompact]}>Jogador {playerIndex + 1}, pronto?</Text>
-            <Text style={styles.body}>Passe o celular para o jogador {playerIndex + 1}. O cronômetro de 20 segundos começa ao tocar no botão.</Text>
+            <Text style={styles.body}>Passe o celular e encontre esta questão no livro:</Text>
+            <View style={[styles.basicBookCard, styles.readyBookCard]}>
+              <View>
+                <Text style={styles.basicBookEyebrow}>QUESTÃO DO LIVRO</Text>
+                <Text style={styles.basicBookCaption}>Programa {current.programId}</Text>
+              </View>
+              <Text accessibilityLabel={`Programa ${current.programId}, questão ${current.number}`} style={styles.basicBookNumber}>
+                {String(current.number).padStart(2, '0')}
+              </Text>
+            </View>
+            <Text style={styles.body}>Quando estiver pronto, comece o turno. Você terá 20 segundos para responder.</Text>
             <Button label="Começar turno" onPress={startPvpTurn} />
             <CombatStage characters={characters} event={null} />
             <HealthBars hp={hp} />
@@ -584,13 +554,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#111827' },
   pinnedLayout: { flex: 1, width: '100%', maxWidth: 680, alignSelf: 'center', paddingHorizontal: 16, paddingBottom: 6 },
   pinnedNarrow: { paddingHorizontal: 12 },
-  pinnedHeader: { paddingTop: 4, paddingBottom: 6 },
-  pinnedTitle: { fontSize: 19, marginTop: 0 },
-  pinnedProgress: { marginTop: 5, marginBottom: 2 },
-  questionScroll: { flex: 1, minHeight: 0 },
-  questionScrollContent: { paddingBottom: 8 },
-  pinnedQuestionCard: { marginTop: 6, marginBottom: 9, padding: 12 },
-  pinnedBottom: { flexShrink: 0 },
   basicHeader: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   basicBrand: { color: '#F4C762', fontSize: 12, fontWeight: '900', letterSpacing: 1.2 },
   basicBrandMode: { color: '#D8E1EF', fontWeight: '700' },
@@ -598,7 +561,9 @@ const styles = StyleSheet.create({
   basicHudLabel: { color: '#D8E1EF', fontSize: 11, fontWeight: '800', letterSpacing: 0.35, flexShrink: 1 },
   basicScore: { color: '#F4C762', fontSize: 21, fontWeight: '900' },
   basicScoreLabel: { fontSize: 10, fontWeight: '800' },
+  pvpTimerUrgent: { color: '#FF8D85' },
   basicBookCard: { height: 108, marginTop: 10, marginBottom: 8, borderRadius: 17, backgroundColor: '#F4C762', paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  readyBookCard: { marginBottom: 16 },
   basicBookCardShort: { height: 82, marginTop: 7, marginBottom: 5, paddingHorizontal: 15 },
   basicBookCardTiny: { height: 72, marginTop: 5, marginBottom: 4 },
   basicBookEyebrow: { color: '#54401B', fontSize: 10, fontWeight: '900', letterSpacing: 1.1 },
@@ -607,10 +572,12 @@ const styles = StyleSheet.create({
   basicBookNumberShort: { fontSize: 53, lineHeight: 60 },
   basicBookNumberTiny: { fontSize: 46, lineHeight: 52 },
   basicActionArea: { flex: 1, minHeight: 188, justifyContent: 'center' },
-  basicActionAreaShort: { minHeight: 170 },
+  basicActionAreaShort: { minHeight: 160 },
   basicActionAreaTiny: { minHeight: 150 },
   basicChoiceTitle: { color: '#D8E1EF', fontSize: 11, fontWeight: '800', letterSpacing: 0.65, marginBottom: 9, textAlign: 'center' },
+  basicChoiceTitleShort: { marginBottom: 6 },
   basicAttempt: { color: '#D8E1EF', fontSize: 13, lineHeight: 19, fontWeight: '700', textAlign: 'center', marginTop: 8 },
+  basicAttemptShort: { fontSize: 12, lineHeight: 16, marginTop: 5 },
   basicArena: { flexShrink: 0, paddingBottom: 5 },
   content: { flexGrow: 1, width: '100%', maxWidth: 680, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 36 },
   contentCompact: { paddingHorizontal: 16, paddingBottom: 22 },
@@ -646,40 +613,27 @@ const styles = StyleSheet.create({
   characterTaken: { color: '#F4C762', fontSize: 11, fontWeight: '700', marginTop: 3 },
   arrow: { color: '#F4C762', fontSize: 28 },
   tag: { color: '#F4C762', fontSize: 12, fontWeight: '800', letterSpacing: 0.8 },
-  statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  statValue: { color: '#FFFFFF', fontSize: 17, fontWeight: '800' },
   hpRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 15, padding: 12, borderRadius: 11, backgroundColor: '#2C3A50' },
-  hpRowCompact: { marginVertical: 6, padding: 8 },
+  hpRowCompact: { marginVertical: 3, padding: 6 },
   hpColumn: { width: '48%' },
   hpText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', marginBottom: 7 },
+  hpTextCompact: { fontSize: 12, marginBottom: 3 },
   hpTrack: { height: 9, borderRadius: 9, backgroundColor: '#111827', overflow: 'hidden' },
+  hpTrackCompact: { height: 7 },
   hpFill: { height: 9, borderRadius: 9 },
+  hpFillCompact: { height: 7 },
   track: { height: 7, borderRadius: 10, backgroundColor: '#364257', overflow: 'hidden' },
   fill: { height: 7, backgroundColor: '#F4C762' },
-  progress: { color: '#B7C2D4', fontSize: 12, fontWeight: '600', marginTop: 8 },
-  questionCard: { backgroundColor: '#202B3D', borderColor: '#34425A', borderWidth: 1, borderRadius: 17, padding: 21, marginVertical: 18 },
-  questionCardCompact: { padding: 14, marginTop: 12, marginBottom: 12 },
-  questionNumber: { color: '#F4C762', fontSize: 11, fontWeight: '800', letterSpacing: 1.2, marginBottom: 11 },
-  question: { color: '#FFFFFF', fontSize: 20, fontWeight: '700', lineHeight: 28 },
-  questionCompact: { fontSize: 18, lineHeight: 25 },
-  choiceTitle: { color: '#D8E1EF', fontSize: 13, fontWeight: '700', marginBottom: 12 },
-  option: { backgroundColor: '#F7F9FC', borderColor: 'transparent', borderWidth: 2, borderRadius: 13, minHeight: 64, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center' },
-  optionCompact: { minHeight: 54, padding: 8, marginBottom: 7 },
   colorGrid: { width: '100%', maxWidth: 420, alignSelf: 'center', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 9 },
   colorKey: { width: '48%', minHeight: 70, borderRadius: 14, borderWidth: 3, borderColor: '#FFFFFF88', alignItems: 'center', justifyContent: 'center' },
-  colorKeyShort: { minHeight: 56 },
+  colorKeyShort: { minHeight: 52 },
   colorKeyTiny: { minHeight: 48 },
   colorKeyRejected: { opacity: 0.35 },
   colorKeyCross: { color: '#FFFFFF', fontSize: 29, fontWeight: '900' },
-  swatch: { width: 33, height: 33, borderRadius: 9, marginRight: 12 },
-  swatchCompact: { width: 30, height: 30, marginRight: 9 },
-  optionCopy: { flex: 1 },
-  optionText: { color: '#172235', fontSize: 15, fontWeight: '600', lineHeight: 20 },
   feedbackBox: { paddingTop: 8 },
   feedbackTitle: { color: '#80D8A9', fontSize: 17, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
   feedbackError: { color: '#FFB0A7' },
   feedbackDetail: { color: '#D8E1EF', fontSize: 14, textAlign: 'center' },
-  hint: { color: '#D8E1EF', fontSize: 13, lineHeight: 19, textAlign: 'center', marginTop: 8 },
   button: { backgroundColor: '#F4C762', borderRadius: 12, minHeight: 50, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, marginTop: 12 },
   buttonDisabled: { opacity: 0.55 },
   buttonText: { color: '#162033', fontSize: 15, fontWeight: '800', textAlign: 'center' },

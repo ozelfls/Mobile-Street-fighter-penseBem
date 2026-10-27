@@ -23,8 +23,8 @@ const MODES = [
     key: 'pvp',
     number: '02',
     title: 'PvP',
-    description: 'Dois jogadores disputam perguntas com vida e tempo.',
-    detail: 'Duelo para 2 jogadores',
+    description: 'Dois jogadores, um livro e 20 turnos. Ache a questão, responda pela cor e lute até o fim.',
+    detail: '20 turnos · 20 s por resposta',
     color: '#E77772',
   },
 ];
