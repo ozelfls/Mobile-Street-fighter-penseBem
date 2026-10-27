@@ -14,9 +14,17 @@ const CAR_FRAMES = [
   { x: 0, y: 90 },
   { x: 0, y: 190 },
   { x: 190, y: 190 },
+  { x: 380, y: 190 },
   { x: 0, y: 283 },
+  { x: 190, y: 283 },
   { x: 380, y: 283 },
+  { x: 0, y: 376 },
+  { x: 190, y: 376 },
 ];
+const CAR_HIT_THRESHOLDS = {
+  45: [0, 1, 3, 6, 10, 16, 24, 34, 45],
+  15: [0, 1, 2, 3, 5, 7, 10, 12, 15],
+};
 const ATTACK_SIZE = {
   ryu: { width: 180, height: 146, left: 10 },
   ken: { width: 215, height: 189, left: 13 },
@@ -25,7 +33,7 @@ const ATTACK_SIZE = {
 };
 const IMPACT_DELAY = { ryu: 160, ken: 700, chunli: 120, blanka: 130 };
 
-export default function BonusCarStage({ character = 'ryu', event, score = 0, compactViewport = false }) {
+export default function BonusCarStage({ character = 'ryu', event, score = 0, targetHits = 45, compactViewport = false }) {
   const [attacking, setAttacking] = useState(false);
   const [impactVisible, setImpactVisible] = useState(false);
   const [displayHits, setDisplayHits] = useState(score);
@@ -37,7 +45,10 @@ export default function BonusCarStage({ character = 'ryu', event, score = 0, com
   const fighter = SPRITES[character] ? character : 'ryu';
   const fighterName = COMBAT_CHARACTERS.find(({ id }) => id === fighter)?.name || 'Ryu';
   const eventId = event?.id;
-  const frame = CAR_FRAMES[displayHits >= 40 ? 4 : displayHits >= 25 ? 3 : displayHits >= 10 ? 2 : displayHits >= 1 ? 1 : 0];
+  const thresholds = CAR_HIT_THRESHOLDS[targetHits] || CAR_HIT_THRESHOLDS[45];
+  const frameIndex = thresholds.reduce((index, threshold, current) =>
+    displayHits >= threshold ? current : index, 0);
+  const frame = CAR_FRAMES[frameIndex];
 
   useEffect(() => {
     if (score === displayHits) return undefined;

@@ -439,6 +439,7 @@ export default function Game({ mode, onExit }) {
               </>
             ) : (
               <BonusCarStage character={selectedClassicCharacter} compactViewport={height < 720}
+                targetHits={mode === 'survival' ? 15 : 45}
                 event={phase === 'feedback' && feedback?.correct ? { id: position } : null} score={carHits} />
             )}
             {phase === 'feedback' && responseStatus}

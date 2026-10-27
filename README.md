@@ -1,6 +1,6 @@
 # Pense Bem: Street Fighter II
 
-Aplicativo React Native com Expo baseado nos cinco programas do livro *Pense Bem: Street Fighter II*. As questões visuais foram adaptadas para texto para facilitar a apresentação no celular.
+Aplicativo React Native com Expo baseado nos cinco programas do livro *Pense Bem: Street Fighter II*. Algumas perguntas dependem das figuras do livro; tenha-o por perto para jogar.
 
 ## Modos
 

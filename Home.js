@@ -49,7 +49,7 @@ export default function Home({ onSelect }) {
         <View style={[styles.header, compact && styles.headerCompact]}>
           <Text style={styles.kicker}>PENSE BEM</Text>
           <Text style={[styles.title, narrow && styles.titleNarrow]}>Street Fighter II</Text>
-          <Text style={styles.subtitle}>Escolha como quer jogar.</Text>
+          <Text style={styles.subtitle}>Escolha como quer jogar. Tenha o livro por perto: algumas perguntas usam as figuras dele.</Text>
         </View>
 
         <Text style={[styles.sectionTitle, compact && styles.sectionTitleCompact]}>Modos de jogo</Text>
