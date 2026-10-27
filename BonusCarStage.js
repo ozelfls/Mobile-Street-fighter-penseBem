@@ -10,16 +10,19 @@ const BONUS_ATTACKS = {
   chunli: require('./assets/combat/chunli-car-attack.gif'),
   blanka: require('./assets/combat/blanka-car-attack.gif'),
 };
+const CAR_FRAME_HEIGHT = 94;
+const CAR_GROUND_INSET = 16;
+// O último pixel visível varia entre os quadros; alinhe todos à mesma linha do cais.
 const CAR_FRAMES = [
-  { x: 0, y: 90 },
-  { x: 0, y: 190 },
-  { x: 190, y: 190 },
-  { x: 380, y: 190 },
-  { x: 0, y: 283 },
-  { x: 190, y: 283 },
-  { x: 380, y: 283 },
-  { x: 0, y: 376 },
-  { x: 190, y: 376 },
+  { x: 0, y: 90, visibleBottom: 88 },
+  { x: 0, y: 190, visibleBottom: 94 },
+  { x: 190, y: 190, visibleBottom: 77 },
+  { x: 380, y: 190, visibleBottom: 77 },
+  { x: 0, y: 283, visibleBottom: 94 },
+  { x: 190, y: 283, visibleBottom: 75 },
+  { x: 380, y: 283, visibleBottom: 94 },
+  { x: 0, y: 376, visibleBottom: 93 },
+  { x: 190, y: 376, visibleBottom: 94 },
 ];
 const CAR_HIT_THRESHOLDS = {
   45: [0, 1, 3, 6, 10, 16, 24, 34, 45],
@@ -49,6 +52,7 @@ export default function BonusCarStage({ character = 'ryu', event, score = 0, tar
   const frameIndex = thresholds.reduce((index, threshold, current) =>
     displayHits >= threshold ? current : index, 0);
   const frame = CAR_FRAMES[frameIndex];
+  const carBottom = (CAR_GROUND_INSET - (CAR_FRAME_HEIGHT - frame.visibleBottom)) * scale;
 
   useEffect(() => {
     if (score === displayHits) return undefined;
@@ -99,14 +103,15 @@ export default function BonusCarStage({ character = 'ryu', event, score = 0, tar
     >
       <Image source={DOCK_STAGE} resizeMode="cover"
         style={[styles.stageBackground, { width: 340 * scale, height: 210 * scale }]} />
+      <View style={[styles.carShadow, { width: 182 * scale, height: 10 * scale, right: 5 * scale, bottom: 10 * scale, borderRadius: 10 * scale }]} />
       <Animated.View
         style={[
           styles.carWindow,
           {
             width: 190 * scale,
-            height: 94 * scale,
+            height: CAR_FRAME_HEIGHT * scale,
             right: 0,
-            bottom: 21 * scale,
+            bottom: carBottom,
             transform: [{ translateX: shake }],
           },
         ]}
@@ -139,6 +144,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   stageBackground: { position: 'absolute', top: 0, left: 0 },
+  carShadow: { position: 'absolute', backgroundColor: 'rgba(34, 22, 18, 0.55)' },
   carWindow: { position: 'absolute', overflow: 'hidden' },
   fighter: { position: 'absolute' },
   impact: { position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: '#F4C762BB' },
