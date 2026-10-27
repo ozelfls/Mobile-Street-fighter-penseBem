@@ -4,7 +4,7 @@ Aplicativo React Native com Expo baseado nos cinco programas do livro *Pense Bem
 
 ## Modos
 
-- **Básico:** escolha um dos cinco programas do livro e um lutador. Cada programa tem 30 questões, com até três tentativas por questão. Os acertos valem 3, 2 ou 1 ponto conforme a tentativa; quem acertar todas na primeira tentativa ganha 10 pontos de bônus, chegando a 100. O lutador ataca o carro a cada questão acertada.
+- **Básico:** escolha um dos cinco programas do livro e um lutador. Cada programa tem 30 questões, com até três tentativas por questão. Os acertos valem 3, 2 ou 1 ponto conforme a tentativa; quem acertar todas na primeira tentativa ganha 10 pontos de bônus, chegando a 100. A cada questão acertada, o lutador golpeia o carro quatro vezes e a destruição avança uma vez.
 - **PvP:** dois jogadores no mesmo aparelho escolhem personagens diferentes entre Ryu, Ken, Chun-Li e Blanka antes de jogar 20 turnos alternados. Cada um começa com 100 HP e tem 20 segundos por pergunta. Acerto causa 15 de dano ao adversário; erro ou tempo esgotado tira de 10 a 30 HP de quem respondeu, aumentando 5 HP a cada 5 segundos. O cronômetro começa quando o jogador toca em **Começar turno**.
 
 ## Rodar localmente

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -33,14 +33,16 @@ function shuffledQuestions(limit) {
   return pool.slice(0, limit);
 }
 
-function Button({ label, onPress, secondary = false }) {
+function Button({ label, onPress, secondary = false, disabled = false }) {
   return (
     <TouchableOpacity
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       activeOpacity={0.8}
       onPress={onPress}
-      style={[styles.button, secondary && styles.buttonSecondary]}
+      style={[styles.button, secondary && styles.buttonSecondary, disabled && styles.buttonDisabled]}
     >
       <Text style={[styles.buttonText, secondary && styles.buttonSecondaryText]}>{label}</Text>
     </TouchableOpacity>
@@ -85,6 +87,7 @@ export default function Game({ mode, onExit }) {
   const [score, setScore] = useState(0);
   const [perfectRun, setPerfectRun] = useState(true);
   const [carHits, setCarHits] = useState(0);
+  const [comboActive, setComboActive] = useState(false);
   const [hp, setHp] = useState([100, 100]);
   const [remaining, setRemaining] = useState(TURN_SECONDS);
   const [lastTurn, setLastTurn] = useState(false);
@@ -97,6 +100,7 @@ export default function Game({ mode, onExit }) {
   const wrongNow = useRef([]);
   const startedAt = useRef(0);
   const { playCorrect, playWrong } = useAnswerSounds();
+  const handleAttackComplete = useCallback(() => setComboActive(false), []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -113,6 +117,7 @@ export default function Game({ mode, onExit }) {
     setScore(0);
     setPerfectRun(true);
     setCarHits(0);
+    setComboActive(false);
     setHp([100, 100]);
     setRemaining(TURN_SECONDS);
     setLastTurn(false);
@@ -162,6 +167,7 @@ export default function Game({ mode, onExit }) {
     setScore(0);
     setPerfectRun(true);
     setCarHits(0);
+    setComboActive(false);
     setSelectedBasicCharacter(null);
     setAttempts(0);
     setWrongColors([]);
@@ -177,6 +183,7 @@ export default function Game({ mode, onExit }) {
     setScore(0);
     setPerfectRun(true);
     setCarHits(0);
+    setComboActive(false);
     setAttempts(0);
     setWrongColors([]);
     setFeedback(null);
@@ -247,6 +254,7 @@ export default function Game({ mode, onExit }) {
         const earned = 4 - nextAttempt;
         setScore((value) => value + earned);
         setCarHits((value) => value + 1);
+        setComboActive(true);
         setFeedback({ correct: true, earned });
         playCorrect();
         setPhase('feedback');
@@ -267,6 +275,7 @@ export default function Game({ mode, onExit }) {
   }
 
   function advance() {
+    if (isBasic && comboActive) return;
     if (isBasic && position + 1 === deck.length) {
       setPhase('ended');
       return;
@@ -277,6 +286,7 @@ export default function Game({ mode, onExit }) {
     }
     setPosition((value) => value + 1);
     setFeedback(null);
+    setComboActive(false);
     locked.current = false;
     if (isBasic) {
       attemptsNow.current = 0;
@@ -297,7 +307,7 @@ export default function Game({ mode, onExit }) {
           : feedback.correct ? `Acertou! +${feedback.earned} ${feedback.earned === 1 ? 'ponto' : 'pontos'}` : 'Três tentativas usadas · 0 pontos.'}
       </Text>
       {!feedback.correct && <Text style={styles.feedbackDetail}>Resposta: {COLORS[current.correctColor]?.label || current.correctColor}.</Text>}
-      <Button label={lastTurn || (isBasic && position + 1 === deck.length) ? 'Ver resultado' : isPvp ? 'Próximo jogador' : 'Próxima pergunta'} onPress={advance} />
+      <Button label={comboActive ? 'Golpeando...' : lastTurn || (isBasic && position + 1 === deck.length) ? 'Ver resultado' : isPvp ? 'Próximo jogador' : 'Próxima pergunta'} onPress={advance} disabled={isBasic && comboActive} />
     </View>
   ) : (
     <Text style={[styles.hint, isBasic && attempts > 0 && styles.feedbackError]} accessibilityLiveRegion="polite">
@@ -392,7 +402,8 @@ export default function Game({ mode, onExit }) {
             ) : (
               <BonusCarStage character={selectedBasicCharacter} compactViewport={height < 720}
                 targetHits={30}
-                event={phase === 'feedback' && feedback?.correct ? { id: position } : null} score={carHits} />
+                event={phase === 'feedback' && feedback?.correct ? { id: position } : null} score={carHits}
+                onAttackComplete={handleAttackComplete} />
             )}
             {phase === 'feedback' && responseStatus}
           </View>
@@ -627,6 +638,7 @@ const styles = StyleSheet.create({
   feedbackDetail: { color: '#D8E1EF', fontSize: 14, textAlign: 'center' },
   hint: { color: '#D8E1EF', fontSize: 13, lineHeight: 19, textAlign: 'center', marginTop: 8 },
   button: { backgroundColor: '#F4C762', borderRadius: 12, minHeight: 50, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, marginTop: 12 },
+  buttonDisabled: { opacity: 0.55 },
   buttonText: { color: '#162033', fontSize: 15, fontWeight: '800', textAlign: 'center' },
   buttonSecondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#66758F' },
   buttonSecondaryText: { color: '#E8EEF8' },

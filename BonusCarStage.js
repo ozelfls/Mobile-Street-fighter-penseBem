@@ -36,9 +36,13 @@ const ATTACK_SIZE = {
   blanka: { width: 227, height: 160, left: -5 },
 };
 const IMPACT_DELAY = { ryu: 160, ken: 700, chunli: 120, blanka: 130 };
+// Reinicie antes da pausa final de cada GIF para manter os quatro golpes fluidos.
+const STRIKE_MS = { ryu: 660, ken: 1100, chunli: 320, blanka: 540 };
+const STRIKES_PER_ANSWER = 4;
 
-export default function BonusCarStage({ character = 'ryu', event, score = 0, targetHits = 45, compactViewport = false }) {
+export default function BonusCarStage({ character = 'ryu', event, score = 0, targetHits = 45, compactViewport = false, onAttackComplete }) {
   const [attacking, setAttacking] = useState(false);
+  const [strike, setStrike] = useState(0);
   const [impactVisible, setImpactVisible] = useState(false);
   const [displayHits, setDisplayHits] = useState(score);
   const shake = useRef(new Animated.Value(0)).current;
@@ -57,39 +61,52 @@ export default function BonusCarStage({ character = 'ryu', event, score = 0, tar
 
   useEffect(() => {
     if (score === displayHits) return undefined;
-    const change = setTimeout(() => setDisplayHits(score), score > displayHits ? IMPACT_DELAY[fighter] : 0);
-    return () => clearTimeout(change);
-  }, [score, displayHits, fighter]);
+    if (eventId == null || score < displayHits) setDisplayHits(score);
+    return undefined;
+  }, [score, displayHits, eventId]);
 
   useEffect(() => {
     if (eventId == null) {
       setAttacking(false);
+      setStrike(0);
       setImpactVisible(false);
       shake.setValue(0);
       return undefined;
     }
 
     setAttacking(true);
+    setStrike(0);
     setImpactVisible(false);
     shake.setValue(0);
-    const impact = setTimeout(() => {
-      setImpactVisible(true);
-      Animated.sequence([
-        Animated.timing(shake, { toValue: 7 * scale, duration: 65, useNativeDriver: true }),
-        Animated.timing(shake, { toValue: -5 * scale, duration: 65, useNativeDriver: true }),
-        Animated.timing(shake, { toValue: 4 * scale, duration: 65, useNativeDriver: true }),
-        Animated.timing(shake, { toValue: 0, duration: 65, useNativeDriver: true }),
-      ]).start();
-    }, IMPACT_DELAY[fighter]);
-    const hideImpact = setTimeout(() => setImpactVisible(false), IMPACT_DELAY[fighter] + 180);
-    const reset = setTimeout(() => setAttacking(false), 1500);
+    const timers = [];
+    for (let hit = 0; hit < STRIKES_PER_ANSWER; hit += 1) {
+      const start = hit * STRIKE_MS[fighter];
+      if (hit > 0) timers.push(setTimeout(() => {
+        setStrike(hit);
+        setImpactVisible(false);
+      }, start));
+      timers.push(setTimeout(() => {
+        setImpactVisible(true);
+        shake.setValue(0);
+        Animated.sequence([
+          Animated.timing(shake, { toValue: 7 * scale, duration: 65, useNativeDriver: true }),
+          Animated.timing(shake, { toValue: -5 * scale, duration: 65, useNativeDriver: true }),
+          Animated.timing(shake, { toValue: 4 * scale, duration: 65, useNativeDriver: true }),
+          Animated.timing(shake, { toValue: 0, duration: 65, useNativeDriver: true }),
+        ]).start();
+        if (hit === STRIKES_PER_ANSWER - 1) setDisplayHits(score);
+      }, start + IMPACT_DELAY[fighter]));
+      timers.push(setTimeout(() => setImpactVisible(false), start + IMPACT_DELAY[fighter] + 180));
+    }
+    timers.push(setTimeout(() => {
+      setAttacking(false);
+      onAttackComplete?.();
+    }, STRIKES_PER_ANSWER * STRIKE_MS[fighter]));
     return () => {
-      clearTimeout(impact);
-      clearTimeout(hideImpact);
-      clearTimeout(reset);
+      timers.forEach(clearTimeout);
       shake.stopAnimation();
     };
-  }, [eventId, fighter]);
+  }, [eventId, fighter, score, scale, onAttackComplete]);
 
   const attack = ATTACK_SIZE[fighter];
   const fighterStyle = attacking
@@ -124,7 +141,7 @@ export default function BonusCarStage({ character = 'ryu', event, score = 0, tar
         />
       </Animated.View>
       <Image
-        key={`${fighter}-${attacking ? 'attack' : 'idle'}-${eventId ?? 'ready'}`}
+        key={`${fighter}-${attacking ? `attack-${eventId}-${strike}` : 'idle'}`}
         source={attacking ? BONUS_ATTACKS[fighter] : SPRITES[fighter].idle}
         resizeMode="contain"
         style={[styles.fighter, fighterStyle, { bottom: 21 * scale }]}
