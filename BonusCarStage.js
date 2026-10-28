@@ -51,7 +51,7 @@ export default function BonusCarStage({ character = 'ryu', event, score = 0, tar
   const [displayHits, setDisplayHits] = useState(score);
   const shake = useRef(new Animated.Value(0)).current;
   const { height, width } = useWindowDimensions();
-  const scale = Math.min(1.05, (width - 24) / 340, height / 780, maxHeight ? maxHeight / 210 : 1.05);
+  const scale = Math.min(1.05, (width - 24) / 340, maxHeight ? maxHeight / 210 : height / 780);
   const fighter = SPRITES[character] ? character : 'ryu';
   const fighterName = COMBAT_CHARACTERS.find(({ id }) => id === fighter)?.name || 'Ryu';
   const eventId = event?.id;

@@ -295,7 +295,9 @@ export default function Game({ mode, onExit }) {
   const pinnedGameplay = current && (phase === 'playing' || phase === 'feedback');
   const basicShort = height < 650;
   const basicTiny = height < 570;
-  const basicArenaHeight = basicTiny ? Math.max(72, height * 0.17 - 8) : Math.max(82, Math.min(168, height * 0.22 - 8));
+  const basicArenaHeight = basicTiny
+    ? Math.max(90, Math.min(140, height * 0.25))
+    : basicShort ? Math.min(180, height * 0.28) : Math.min(220, height * 0.30);
   const pvpArenaHeight = Math.max(125, Math.min(205, height * 0.28));
 
   return (
