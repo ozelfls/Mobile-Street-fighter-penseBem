@@ -9,6 +9,8 @@ const BONUS_ATTACKS = {
   ken: require('./assets/combat/ken-car-attack.gif'),
   chunli: require('./assets/combat/chunli-car-attack.gif'),
   blanka: require('./assets/combat/blanka-car-attack.gif'),
+  guile: require('./assets/combat/guile-car-attack.gif'),
+  dhalsim: require('./assets/combat/dhalsim-car-attack.gif'),
 };
 const CAR_FRAME_HEIGHT = 94;
 const CAR_GROUND_INSET = 16;
@@ -34,10 +36,12 @@ const ATTACK_SIZE = {
   ken: { width: 215, height: 189, left: 13 },
   chunli: { width: 225, height: 161, left: 0 },
   blanka: { width: 227, height: 160, left: -5 },
+  guile: { width: 170, height: 145, left: 5 },
+  dhalsim: { width: 205, height: 145, left: -5 },
 };
-const IMPACT_DELAY = { ryu: 160, ken: 700, chunli: 120, blanka: 130 };
+const IMPACT_DELAY = { ryu: 160, ken: 700, chunli: 120, blanka: 130, guile: 250, dhalsim: 160 };
 // Reinicie antes da pausa final de cada GIF para manter os quatro golpes fluidos.
-const STRIKE_MS = { ryu: 660, ken: 1100, chunli: 320, blanka: 540 };
+const STRIKE_MS = { ryu: 660, ken: 1100, chunli: 320, blanka: 540, guile: 450, dhalsim: 380 };
 const STRIKES_PER_ANSWER = 4;
 
 export default function BonusCarStage({ character = 'ryu', event, score = 0, targetHits = 45, compactViewport = false, maxHeight, onAttackComplete }) {

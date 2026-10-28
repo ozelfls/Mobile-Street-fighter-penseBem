@@ -22,6 +22,16 @@ export const SPRITES = {
     attack: require('./assets/combat/blanka-attack.gif'),
     hurt: require('./assets/combat/blanka-hurt.gif'),
   },
+  guile: {
+    idle: require('./assets/combat/guile-idle.gif'),
+    attack: require('./assets/combat/guile-attack.gif'),
+    hurt: require('./assets/combat/guile-hurt.gif'),
+  },
+  dhalsim: {
+    idle: require('./assets/combat/dhalsim-idle.gif'),
+    attack: require('./assets/combat/dhalsim-attack.gif'),
+    hurt: require('./assets/combat/dhalsim-hurt.gif'),
+  },
 };
 
 export const COMBAT_CHARACTERS = [
@@ -29,6 +39,8 @@ export const COMBAT_CHARACTERS = [
   { id: 'ken', name: 'Ken', portrait: SPRITES.ken.idle },
   { id: 'chunli', name: 'Chun-Li', portrait: SPRITES.chunli.idle },
   { id: 'blanka', name: 'Blanka', portrait: SPRITES.blanka.idle },
+  { id: 'guile', name: 'Guile', portrait: SPRITES.guile.idle },
+  { id: 'dhalsim', name: 'Dhalsim', portrait: SPRITES.dhalsim.idle },
 ];
 
 const CHARACTER_NAMES = Object.fromEntries(COMBAT_CHARACTERS.map(({ id, name }) => [id, name]));
@@ -37,7 +49,10 @@ const ATTACK_SIZE = {
   ken: { width: 130, height: 214 },
   chunli: { width: 315, height: 190 },
   blanka: { width: 220, height: 140 },
+  guile: { width: 225, height: 145 },
+  dhalsim: { width: 347, height: 145 },
 };
+const ATTACK_OFFSET = { chunli: 30, blanka: 30, guile: 56, dhalsim: 93 };
 
 export default function CombatStage({ characters = ['ryu', 'ken'], event, compactViewport = false, maxHeight }) {
   const [poses, setPoses] = useState(['idle', 'idle']);
@@ -56,9 +71,7 @@ export default function CombatStage({ characters = ['ryu', 'ken'], event, compac
       return { width: '100%', height: 145 * scale, position: 'absolute', bottom: 0 };
     }
     const size = ATTACK_SIZE[character];
-    const wideOffset = character === 'chunli' || character === 'blanka'
-      ? (side === 'left' ? 30 : -30) * scale
-      : 0;
+    const wideOffset = (side === 'left' ? 1 : -1) * (ATTACK_OFFSET[character] || 0) * scale;
     return {
       width: size.width * scale,
       height: size.height * scale,
