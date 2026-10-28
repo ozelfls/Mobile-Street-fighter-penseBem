@@ -24,7 +24,7 @@ const MODES = [
     number: '02',
     title: 'PvP',
     description: 'Dois jogadores, um livro e 20 turnos. Ache a questão, responda pela cor e lute até o fim.',
-    detail: '20 turnos · 20 s por resposta',
+    detail: '20 turnos · sem limite de resposta',
     color: '#E77772',
   },
 ];

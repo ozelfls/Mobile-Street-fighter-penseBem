@@ -62,23 +62,26 @@ export default function CombatStage({ characters = ['ryu', 'ken'], event, compac
   const left = SPRITES[characters[0]] ? characters[0] : 'ryu';
   const right = SPRITES[characters[1]] ? characters[1] : 'ken';
   const viewportScale = compactViewport
-    ? Math.min(arenaWidth / 360, Math.max(0.45, Math.min(0.6, windowHeight / 1300)))
+    ? Math.min(1, arenaWidth / 360)
     : Math.max(0.64, Math.min(1.08, arenaWidth / 360, windowHeight / 800));
-  const scale = maxHeight ? Math.min(viewportScale, (maxHeight - 16) / 273) : viewportScale;
+  const scale = maxHeight ? Math.min(viewportScale, (maxHeight - 16) / (compactViewport ? 220 : 273)) : viewportScale;
 
   function imageStyle(character, pose, side) {
     if (pose !== 'attack') {
-      return { width: '100%', height: 145 * scale, position: 'absolute', bottom: 0 };
+      return { width: '100%', height: (compactViewport ? 175 : 145) * scale, position: 'absolute', bottom: 0 };
     }
     const size = ATTACK_SIZE[character];
-    const wideOffset = (side === 'left' ? 1 : -1) * (ATTACK_OFFSET[character] || 0) * scale;
+    const attackScale = compactViewport
+      ? Math.min(175 * scale / size.height, arenaWidth * 0.88 / size.width)
+      : scale;
+    const wideOffset = (side === 'left' ? 1 : -1) * (ATTACK_OFFSET[character] || 0) * attackScale;
     return {
-      width: size.width * scale,
-      height: size.height * scale,
+      width: size.width * attackScale,
+      height: size.height * attackScale,
       position: 'absolute',
       bottom: 0,
       left: '50%',
-      marginLeft: -size.width * scale / 2 + wideOffset,
+      marginLeft: -size.width * attackScale / 2 + wideOffset,
     };
   }
 
@@ -108,7 +111,7 @@ export default function CombatStage({ characters = ['ryu', 'ken'], event, compac
       {!compactViewport && <Text style={styles.arenaLabel}>ARENA</Text>}
       <View style={styles.fighters}>
         <View style={styles.fighter}>
-          <View style={[styles.spriteFrame, { height: 258 * scale }]}>
+          <View style={[styles.spriteFrame, { height: (compactViewport ? 190 : 258) * scale }]}>
             <Image
               key={`${left}-${poses[0]}-${eventId ?? 'idle'}`}
               source={SPRITES[left][poses[0]]}
@@ -120,7 +123,7 @@ export default function CombatStage({ characters = ['ryu', 'ken'], event, compac
           <Text style={[styles.name, { fontSize: 11 * scale }]}>{CHARACTER_NAMES[left].toUpperCase()} · J1</Text>
         </View>
         <View style={styles.fighter}>
-          <View style={[styles.spriteFrame, { height: 258 * scale }]}>
+          <View style={[styles.spriteFrame, { height: (compactViewport ? 190 : 258) * scale }]}>
             <Image
               key={`${right}-${poses[1]}-${eventId ?? 'idle'}`}
               source={SPRITES[right][poses[1]]}

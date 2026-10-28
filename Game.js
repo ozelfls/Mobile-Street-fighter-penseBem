@@ -22,7 +22,6 @@ const COLORS = {
   green: { label: 'Verde', hex: '#3E9876' },
 };
 const PVP_TURNS = 20;
-const TURN_SECONDS = 20;
 
 function shuffledQuestions(limit) {
   const pool = (book.programs || []).flatMap((program) =>
@@ -91,7 +90,6 @@ export default function Game({ mode, onExit }) {
   const [carHits, setCarHits] = useState(0);
   const [comboActive, setComboActive] = useState(false);
   const [hp, setHp] = useState([100, 100]);
-  const [remaining, setRemaining] = useState(TURN_SECONDS);
   const [lastTurn, setLastTurn] = useState(false);
   const [endReason, setEndReason] = useState('');
   const [characters, setCharacters] = useState([null, null]);
@@ -121,7 +119,6 @@ export default function Game({ mode, onExit }) {
     setCarHits(0);
     setComboActive(false);
     setHp([100, 100]);
-    setRemaining(TURN_SECONDS);
     setLastTurn(false);
     setEndReason('');
     setProgram(null);
@@ -139,21 +136,6 @@ export default function Game({ mode, onExit }) {
       setPhase('select');
     }
   }, [mode]);
-
-  useEffect(() => {
-    if (mode !== 'pvp' || phase !== 'playing') return undefined;
-    const timer = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startedAt.current) / 1000);
-      setRemaining(Math.max(0, TURN_SECONDS - elapsed));
-    }, 200);
-    return () => clearInterval(timer);
-  }, [mode, phase, position]);
-
-  useEffect(() => {
-    if (mode === 'pvp' && phase === 'playing' && remaining === 0) {
-      resolvePvp(false, true);
-    }
-  }, [mode, phase, remaining]);
 
   const current = deck[position];
   const playerIndex = position % 2;
@@ -216,21 +198,18 @@ export default function Game({ mode, onExit }) {
   function startPvpTurn() {
     locked.current = false;
     setFeedback(null);
-    setRemaining(TURN_SECONDS);
     startedAt.current = Date.now();
     setPhase('playing');
   }
 
-  function resolvePvp(correct, timedOut = false) {
+  function resolvePvp(correct) {
     if (locked.current || phase !== 'playing') return;
     locked.current = true;
     const elapsedMs = Math.max(0, Date.now() - startedAt.current);
-    const expired = timedOut || elapsedMs >= TURN_SECONDS * 1000;
-    const acceptedCorrect = correct && !expired;
-    const elapsed = expired ? TURN_SECONDS : Math.floor(elapsedMs / 1000);
-    const damage = acceptedCorrect ? 15 : Math.min(30, 10 + 5 * Math.floor(elapsed / 5));
+    const elapsed = Math.floor(elapsedMs / 1000);
+    const damage = correct ? 15 : Math.min(30, 10 + 5 * Math.floor(elapsed / 5));
     const nextHp = [...hp];
-    const damagedPlayer = acceptedCorrect ? 1 - playerIndex : playerIndex;
+    const damagedPlayer = correct ? 1 - playerIndex : playerIndex;
     nextHp[damagedPlayer] = Math.max(0, nextHp[damagedPlayer] - damage);
     setHp(nextHp);
     const endedByHp = nextHp[damagedPlayer] === 0;
@@ -238,8 +217,8 @@ export default function Game({ mode, onExit }) {
     setLastTurn(endedByHp || endedByTurns);
     if (endedByHp) setEndReason(`Jogador ${damagedPlayer + 1} ficou sem vida.`);
     else if (endedByTurns) setEndReason('Os 20 turnos terminaram.');
-    setFeedback({ correct: acceptedCorrect, damage, timedOut: expired });
-    if (acceptedCorrect) playCorrect();
+    setFeedback({ correct, damage });
+    if (correct) playCorrect();
     else playWrong();
     setPhase('feedback');
   }
@@ -305,7 +284,7 @@ export default function Game({ mode, onExit }) {
     <View style={styles.feedbackBox} accessibilityLiveRegion="polite">
       <Text style={[styles.feedbackTitle, !feedback.correct && styles.feedbackError]}>
         {isPvp
-          ? feedback.correct ? 'Acertou! O adversário perdeu 15 HP.' : feedback.timedOut ? `Tempo esgotado! Você perdeu ${feedback.damage} HP.` : `Errou! Você perdeu ${feedback.damage} HP.`
+          ? feedback.correct ? 'Acertou! O adversário perdeu 15 HP.' : `Errou! Você perdeu ${feedback.damage} HP.`
           : feedback.correct ? `Acertou! +${feedback.earned} ${feedback.earned === 1 ? 'ponto' : 'pontos'}` : 'Três tentativas usadas · 0 pontos.'}
       </Text>
       {!feedback.correct && <Text style={styles.feedbackDetail}>Resposta: {COLORS[current.correctColor]?.label || current.correctColor}.</Text>}
@@ -317,7 +296,7 @@ export default function Game({ mode, onExit }) {
   const basicShort = height < 650;
   const basicTiny = height < 570;
   const basicArenaHeight = basicTiny ? Math.max(72, height * 0.17 - 8) : Math.max(82, Math.min(168, height * 0.22 - 8));
-  const pvpArenaHeight = Math.max(92, Math.min(155, height * 0.22));
+  const pvpArenaHeight = Math.max(125, Math.min(205, height * 0.28));
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -332,22 +311,20 @@ export default function Game({ mode, onExit }) {
           </View>
           <View style={styles.basicHud}>
             <Text style={styles.basicHudLabel}>{isBasic ? `QUESTÃO ${position + 1}/${deck.length}` : `JOGADOR ${playerIndex + 1}  ·  TURNO ${position + 1}/${deck.length}`}</Text>
-            <Text style={[styles.basicScore, isPvp && remaining <= 5 && styles.pvpTimerUrgent]}>
-              {isBasic ? score : remaining} <Text style={styles.basicScoreLabel}>{isBasic ? 'PTS' : 'S'}</Text>
-            </Text>
+            {isBasic && <Text style={styles.basicScore}>{score} <Text style={styles.basicScoreLabel}>PTS</Text></Text>}
           </View>
           <View style={styles.track}><View style={[styles.fill, { width: `${((position + 1) / deck.length) * 100}%` }]} /></View>
-          <View style={[styles.basicBookCard, basicShort && styles.basicBookCardShort, basicTiny && styles.basicBookCardTiny]}>
+          <View style={[styles.basicBookCard, (basicShort || isPvp) && styles.basicBookCardShort, basicTiny && styles.basicBookCardTiny]}>
             <View>
               <Text style={styles.basicBookEyebrow}>QUESTÃO DO LIVRO</Text>
               <Text style={styles.basicBookCaption}>Programa {isBasic ? program?.id : current.programId}</Text>
             </View>
             <Text accessibilityRole="header" accessibilityLabel={`Programa ${isBasic ? program?.id : current.programId}, questão ${current.number}`}
-              style={[styles.basicBookNumber, basicShort && styles.basicBookNumberShort, basicTiny && styles.basicBookNumberTiny]}>
+              style={[styles.basicBookNumber, (basicShort || isPvp) && styles.basicBookNumberShort, basicTiny && styles.basicBookNumberTiny]}>
               {String(current.number).padStart(2, '0')}
             </Text>
           </View>
-          <View style={[styles.basicActionArea, basicShort && styles.basicActionAreaShort, basicTiny && styles.basicActionAreaTiny]}>
+          <View style={[styles.basicActionArea, (basicShort || isPvp) && styles.basicActionAreaShort, basicTiny && styles.basicActionAreaTiny]}>
             {phase === 'playing' && (
               <>
                 <Text style={[styles.basicChoiceTitle, basicShort && styles.basicChoiceTitleShort]}>TOQUE NA COR DA RESPOSTA</Text>
@@ -358,7 +335,7 @@ export default function Game({ mode, onExit }) {
                       <TouchableOpacity key={key} accessibilityRole="button" accessibilityLabel={`Resposta ${color.label.toLowerCase()}`}
                         accessibilityState={{ disabled: rejected }} disabled={rejected}
                         onPress={() => answer(key)} activeOpacity={0.8}
-                        style={[styles.colorKey, basicShort && styles.colorKeyShort, basicTiny && styles.colorKeyTiny, { backgroundColor: color.hex }, rejected && styles.colorKeyRejected]}>
+                        style={[styles.colorKey, (basicShort || isPvp) && styles.colorKeyShort, basicTiny && styles.colorKeyTiny, { backgroundColor: color.hex }, rejected && styles.colorKeyRejected]}>
                         {rejected && <Text style={styles.colorKeyCross}>×</Text>}
                       </TouchableOpacity>
                     );
@@ -367,7 +344,7 @@ export default function Game({ mode, onExit }) {
                 <Text style={[styles.basicAttempt, basicShort && styles.basicAttemptShort, isBasic && attempts > 0 && styles.feedbackError]} accessibilityLiveRegion="polite">
                   {isBasic
                     ? attempts === 0 ? 'Você tem 3 tentativas.' : `Errou! Restam ${3 - attempts} ${3 - attempts === 1 ? 'tentativa' : 'tentativas'}.`
-                    : 'Acerto: rival perde 15 HP. Erro: seu HP cai.'}
+                    : 'Acerto: rival perde 15 HP. Erro: dano cresce com a demora.'}
                 </Text>
               </>
             )}
@@ -488,7 +465,7 @@ export default function Game({ mode, onExit }) {
                 {String(current.number).padStart(2, '0')}
               </Text>
             </View>
-            <Text style={styles.body}>Quando estiver pronto, comece o turno. Você terá 20 segundos para responder.</Text>
+            <Text style={styles.body}>Quando estiver pronto, comece o turno e responda pelas teclas coloridas.</Text>
             <Button label="Começar turno" onPress={startPvpTurn} />
             <CombatStage characters={characters} event={null} />
             <HealthBars hp={hp} />
@@ -561,7 +538,6 @@ const styles = StyleSheet.create({
   basicHudLabel: { color: '#D8E1EF', fontSize: 11, fontWeight: '800', letterSpacing: 0.35, flexShrink: 1 },
   basicScore: { color: '#F4C762', fontSize: 21, fontWeight: '900' },
   basicScoreLabel: { fontSize: 10, fontWeight: '800' },
-  pvpTimerUrgent: { color: '#FF8D85' },
   basicBookCard: { height: 108, marginTop: 10, marginBottom: 8, borderRadius: 17, backgroundColor: '#F4C762', paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   readyBookCard: { marginBottom: 16 },
   basicBookCardShort: { height: 82, marginTop: 7, marginBottom: 5, paddingHorizontal: 15 },
