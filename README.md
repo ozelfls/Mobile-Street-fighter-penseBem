@@ -20,7 +20,7 @@ Abra o QR code no Expo Go ou use as opções do Expo para Android, iOS ou navega
 
 ## Homologação para a aula
 
-[testes de homologação part 2](https://snack.expo.dev/r_gjsTkySwU0oN44nVRPF?platform=web). Esta versão corresponde à `main`: Básico e PvP usam o livro físico e teclas coloridas; o Básico mantém a cena do carro e o PvP mantém a luta entre personagens. É necessário acesso à internet para carregar o jogo, os sprites e os sons.
+[Projeto Final Mobile](https://snack.expo.dev/7bst3C93JHiluZmuSwkrs?platform=web). Esta versão corresponde à `main`: Básico e PvP usam o livro físico e teclas coloridas; o Básico mantém a cena do carro e o PvP mantém a luta entre personagens. É necessário acesso à internet para carregar o jogo, os sprites e os sons.
 
 ## Arquivos principais
 
