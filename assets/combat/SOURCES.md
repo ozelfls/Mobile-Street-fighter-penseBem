@@ -12,7 +12,7 @@ GIFs de Street Fighter obtidos no acervo [The Fighters Generation](https://www.f
 | `ken-hurt.gif` | https://www.fightersgeneration.com/characters2/ken-hit.gif |
 | `chunli-idle.gif` | https://www.fightersgeneration.com/np7/char/gifs/chun-sf2-stance.gif |
 | `chunli-attack.gif` | https://www.fightersgeneration.com/characters/chunli-spinningbirdkick.gif |
-| `chunli-hurt.gif` | https://www.fightersgeneration.com/characters/chun-mvc-fall.gif |
+| `chunli-hurt.gif` | https://www.fightersgeneration.com/np7/char/gifs/chunny/chunli-cfe-dizzy.gif |
 | `blanka-idle.gif` | https://www.fightersgeneration.com/characters/sf-blanka.gif |
 | `blanka-attack.gif` | https://www.fightersgeneration.com/characters/blanka-electric.gif |
 | `blanka-hurt.gif` | https://www.fightersgeneration.com/characters/blanka-diz.gif |
@@ -26,7 +26,7 @@ GIFs de Street Fighter obtidos no acervo [The Fighters Generation](https://www.f
 | `car-bonus-dock.png` | Gerado para este protótipo com céu, mar e cais em pixel art; sem navio. |
 | `ryu-car-attack.gif` | https://www.fightersgeneration.com/characters3/ryu-sf2-a3.gif |
 | `ken-car-attack.gif` | https://www.fightersgeneration.com/characters2/ken-cvs-axekick.gif |
-| `chunli-car-attack.gif` | https://www.fightersgeneration.com/characters/chuny-ts-kickz.gif |
+| `chunli-car-attack.gif` | https://www.fightersgeneration.com/characters/chun-ts-a12.gif |
 | `blanka-car-attack.gif` | https://www.fightersgeneration.com/characters/blanka-sfa-fp.gif |
 | `guile-car-attack.gif` | https://www.fightersgeneration.com/characters/guile-jab.gif |
 | `dhalsim-car-attack.gif` | https://www.fightersgeneration.com/characters/dhal-sf2-a1.gif |

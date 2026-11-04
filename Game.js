@@ -89,6 +89,7 @@ export default function Game({ mode, onExit }) {
   const [perfectRun, setPerfectRun] = useState(true);
   const [carHits, setCarHits] = useState(0);
   const [comboActive, setComboActive] = useState(false);
+  const [combatAnimating, setCombatAnimating] = useState(false);
   const [hp, setHp] = useState([100, 100]);
   const [lastTurn, setLastTurn] = useState(false);
   const [endReason, setEndReason] = useState('');
@@ -99,12 +100,31 @@ export default function Game({ mode, onExit }) {
   const attemptsNow = useRef(0);
   const wrongNow = useRef([]);
   const startedAt = useRef(0);
+  const pendingHp = useRef(null);
+  const advanceLocked = useRef(false);
   const { playCorrect, playWrong } = useAnswerSounds();
   const handleAttackComplete = useCallback(() => setComboActive(false), []);
+  const handleCombatImpact = useCallback(() => {
+    if (pendingHp.current) {
+      setHp(pendingHp.current);
+      pendingHp.current = null;
+    }
+  }, []);
+  const handleCombatComplete = useCallback(() => {
+    if (pendingHp.current) {
+      setHp(pendingHp.current);
+      pendingHp.current = null;
+    }
+    setCombatAnimating(false);
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [mode, phase, position, selectingPlayer]);
+
+  useEffect(() => {
+    if (phase !== 'feedback') advanceLocked.current = false;
+  }, [phase, position]);
 
   useEffect(() => {
     locked.current = false;
@@ -118,6 +138,9 @@ export default function Game({ mode, onExit }) {
     setPerfectRun(true);
     setCarHits(0);
     setComboActive(false);
+    setCombatAnimating(false);
+    pendingHp.current = null;
+    advanceLocked.current = false;
     setHp([100, 100]);
     setLastTurn(false);
     setEndReason('');
@@ -211,7 +234,8 @@ export default function Game({ mode, onExit }) {
     const nextHp = [...hp];
     const damagedPlayer = correct ? 1 - playerIndex : playerIndex;
     nextHp[damagedPlayer] = Math.max(0, nextHp[damagedPlayer] - damage);
-    setHp(nextHp);
+    pendingHp.current = nextHp;
+    setCombatAnimating(true);
     const endedByHp = nextHp[damagedPlayer] === 0;
     const endedByTurns = position + 1 === deck.length;
     setLastTurn(endedByHp || endedByTurns);
@@ -256,7 +280,8 @@ export default function Game({ mode, onExit }) {
   }
 
   function advance() {
-    if (isBasic && comboActive) return;
+    if (phase !== 'feedback' || advanceLocked.current || (isBasic && comboActive) || (isPvp && combatAnimating)) return;
+    advanceLocked.current = true;
     if (isBasic && position + 1 === deck.length) {
       setPhase('ended');
       return;
@@ -288,7 +313,8 @@ export default function Game({ mode, onExit }) {
           : feedback.correct ? `Acertou! +${feedback.earned} ${feedback.earned === 1 ? 'ponto' : 'pontos'}` : 'Três tentativas usadas · 0 pontos.'}
       </Text>
       {!feedback.correct && <Text style={styles.feedbackDetail}>Resposta: {COLORS[current.correctColor]?.label || current.correctColor}.</Text>}
-      <Button label={comboActive ? 'Golpeando...' : lastTurn || (isBasic && position + 1 === deck.length) ? 'Ver resultado' : isPvp ? 'Próximo jogador' : 'Próxima pergunta'} onPress={advance} disabled={isBasic && comboActive} />
+      <Button label={combatAnimating ? 'Lutando...' : comboActive ? 'Golpeando...' : lastTurn || (isBasic && position + 1 === deck.length) ? 'Ver resultado' : isPvp ? 'Próximo jogador' : 'Próxima pergunta'}
+        onPress={advance} disabled={(isBasic && comboActive) || (isPvp && combatAnimating)} />
     </View>
   );
 
@@ -354,17 +380,19 @@ export default function Game({ mode, onExit }) {
           </View>
           <View style={styles.basicArena}>
             {isBasic ? (
-              <BonusCarStage character={selectedBasicCharacter} targetHits={30} maxHeight={basicArenaHeight} compactViewport
+              <BonusCarStage character={selectedBasicCharacter} targetHits={30} maxHeight={basicArenaHeight}
+                maxWidth={Math.min(width, 680) - (narrow ? 24 : 32)} compactViewport
                 event={phase === 'feedback' && feedback?.correct ? { id: position } : null} score={carHits}
                 onAttackComplete={handleAttackComplete} />
             ) : (
               <>
                 <CombatStage characters={characters} compactViewport maxHeight={pvpArenaHeight}
-              event={phase === 'feedback' && feedback ? {
-                id: position,
-                attacker: feedback.correct ? playerIndex : 1 - playerIndex,
-                hurt: feedback.correct ? 1 - playerIndex : playerIndex,
-              } : null} />
+                  onImpact={handleCombatImpact} onAnimationComplete={handleCombatComplete}
+                  event={phase === 'feedback' && feedback ? {
+                    id: position,
+                    attacker: feedback.correct ? playerIndex : 1 - playerIndex,
+                    hurt: feedback.correct ? 1 - playerIndex : playerIndex,
+                  } : null} />
                 <HealthBars hp={hp} compact />
               </>
             )}

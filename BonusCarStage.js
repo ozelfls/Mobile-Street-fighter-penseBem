@@ -34,24 +34,24 @@ const CAR_HIT_THRESHOLDS = {
 const ATTACK_SIZE = {
   ryu: { width: 180, height: 146, left: 10 },
   ken: { width: 215, height: 189, left: 13 },
-  chunli: { width: 225, height: 161, left: 0 },
+  chunli: { width: 254, height: 145, left: -5 },
   blanka: { width: 227, height: 160, left: -5 },
   guile: { width: 170, height: 145, left: 5 },
-  dhalsim: { width: 205, height: 145, left: -5 },
+  dhalsim: { width: 233, height: 165, left: -5 },
 };
-const IMPACT_DELAY = { ryu: 160, ken: 700, chunli: 120, blanka: 130, guile: 250, dhalsim: 160 };
+const IMPACT_DELAY = { ryu: 160, ken: 930, chunli: 260, blanka: 130, guile: 250, dhalsim: 160 };
 // Reinicie antes da pausa final de cada GIF para manter os quatro golpes fluidos.
-const STRIKE_MS = { ryu: 660, ken: 1100, chunli: 320, blanka: 540, guile: 450, dhalsim: 380 };
+const STRIKE_MS = { ryu: 660, ken: 1250, chunli: 640, blanka: 540, guile: 520, dhalsim: 430 };
 const STRIKES_PER_ANSWER = 4;
 
-export default function BonusCarStage({ character = 'ryu', event, score = 0, targetHits = 45, compactViewport = false, maxHeight, onAttackComplete }) {
+export default function BonusCarStage({ character = 'ryu', event, score = 0, targetHits = 45, compactViewport = false, maxHeight, maxWidth, onAttackComplete }) {
   const [attacking, setAttacking] = useState(false);
   const [strike, setStrike] = useState(0);
   const [impactVisible, setImpactVisible] = useState(false);
   const [displayHits, setDisplayHits] = useState(score);
   const shake = useRef(new Animated.Value(0)).current;
   const { height, width } = useWindowDimensions();
-  const scale = Math.min(1.05, (width - 24) / 340, maxHeight ? maxHeight / 210 : height / 780);
+  const scale = Math.min(1.05, (maxWidth ?? width - 24) / 340, maxHeight ? maxHeight / 210 : height / 780);
   const fighter = SPRITES[character] ? character : 'ryu';
   const fighterName = COMBAT_CHARACTERS.find(({ id }) => id === fighter)?.name || 'Ryu';
   const eventId = event?.id;
@@ -108,7 +108,7 @@ export default function BonusCarStage({ character = 'ryu', event, score = 0, tar
       timers.forEach(clearTimeout);
       shake.stopAnimation();
     };
-  }, [eventId, fighter, score, scale, onAttackComplete]);
+  }, [eventId, fighter, score, onAttackComplete]);
 
   const attack = ATTACK_SIZE[fighter];
   const fighterStyle = attacking
